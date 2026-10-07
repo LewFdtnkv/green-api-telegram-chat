@@ -33,7 +33,8 @@ export function createTelegramHttpGateway(fetchClient: FetchClient = fetch): Tel
     getProfile: (token) => request<TelegramBot>(token, 'getMe', {}),
     getUpdates: (token, offset) => request<TelegramUpdate[]>(token, 'getUpdates', {
       offset,
-      timeout: 20,
+      // The browser owns the short polling cadence, so a manual refresh returns immediately.
+      timeout: 0,
       allowed_updates: ['message']
     }),
     sendTextMessage: (token, command: SendTextMessageCommand) => request<TelegramMessage>(token, 'sendMessage', {

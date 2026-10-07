@@ -90,7 +90,7 @@ export function TelegramChatPage() {
   useEffect(() => {
     if (!token || !profile) return undefined;
     readUpdates();
-    const timer = window.setInterval(readUpdates, 5000);
+    const timer = window.setInterval(readUpdates, 3000);
     return () => window.clearInterval(timer);
   }, [profile, readUpdates, token]);
 
