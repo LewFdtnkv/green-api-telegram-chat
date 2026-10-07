@@ -1,0 +1,106 @@
+@use '../../../shared/styles/mixins' as mixins;
+
+.app-shell {
+  display: grid;
+  min-height: 100dvh;
+  grid-template-columns: var(--sidebar-width) minmax(0, 1fr);
+  background: var(--color-soft);
+}
+
+.chat-panel {
+  display: flex;
+  min-width: 0;
+  min-height: 100dvh;
+  flex-direction: column;
+  background: #f1f5f5;
+}
+
+.welcome-screen {
+  display: grid;
+  max-width: 410px;
+  padding: 24px;
+  margin: auto;
+  justify-items: center;
+  text-align: center;
+
+  h1 {
+    margin: 0;
+    font-size: 22px;
+    font-weight: 750;
+  }
+
+  p {
+    max-width: 340px;
+    margin: 11px 0 22px;
+    color: var(--color-muted);
+    font-size: 14px;
+    line-height: 1.5;
+  }
+}
+
+.welcome-icon {
+  display: grid;
+  width: 76px;
+  height: 76px;
+  place-items: center;
+  margin-bottom: 18px;
+  border-radius: 50%;
+  color: var(--color-brand);
+  background: #d3e7e3;
+}
+
+.toast {
+  position: fixed;
+  z-index: 20;
+  bottom: 22px;
+  left: 50%;
+  display: flex;
+  min-width: min(430px, calc(100vw - 32px));
+  align-items: center;
+  justify-content: space-between;
+  gap: 15px;
+  padding: 12px 14px;
+  transform: translateX(-50%);
+  border-radius: var(--radius-sm);
+  color: #fff;
+  background: #2a3b40;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+  font-size: 13px;
+
+  button {
+    border: 0;
+    color: #fff;
+    background: transparent;
+    font-size: 22px;
+    line-height: 1;
+  }
+}
+
+@include mixins.tablet {
+  .app-shell {
+    grid-template-columns: 304px minmax(0, 1fr);
+  }
+}
+
+@include mixins.mobile {
+  .app-shell {
+    display: block;
+  }
+
+  .chat-panel {
+    position: fixed;
+    z-index: 2;
+    inset: 0;
+    transform: translateX(100%);
+    transition: transform 220ms ease;
+
+    &.open {
+      transform: translateX(0);
+    }
+  }
+
+  .toast {
+    bottom: max(14px, env(safe-area-inset-bottom));
+    min-width: calc(100vw - 28px);
+  }
+}

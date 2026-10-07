@@ -1,0 +1,6 @@
+@use '../shared/styles/tokens';
+@use '../shared/styles/base';
+@use '../shared/styles/dialog';
+@use '../pages/chat/ui/telegram-chat-page';
+@use '../widgets/chat-sidebar/ui/chat-sidebar';
+@use '../widgets/chat-window/ui/chat-window';

@@ -1,0 +1,150 @@
+@use './mixins' as mixins;
+
+.overlay {
+  position: fixed;
+  z-index: 10;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgba(26, 39, 44, 0.42);
+  backdrop-filter: blur(2px);
+}
+
+.modal {
+  position: relative;
+  width: min(100%, 430px);
+  padding: 26px;
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-float);
+
+  &.compact {
+    width: min(100%, 390px);
+  }
+
+  h2 {
+    margin: 0 0 4px;
+    font-size: 18px;
+  }
+
+  label {
+    display: block;
+    margin: 0 0 7px;
+    color: #425159;
+    font-size: 13px;
+    font-weight: 700;
+  }
+
+  input {
+    width: 100%;
+    height: 42px;
+    padding: 0 11px;
+    border: 1px solid #d5dfe1;
+    border-radius: var(--radius-sm);
+    color: var(--color-ink);
+    background: var(--color-surface);
+
+    &:focus {
+      border-color: var(--color-brand);
+    }
+  }
+}
+
+.modal-heading {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 22px;
+
+  p {
+    margin: 0;
+    color: #74838b;
+    font-size: 12px;
+    line-height: 1.4;
+  }
+}
+
+.modal-icon {
+  display: grid;
+  flex: 0 0 auto;
+  width: 40px;
+  height: 40px;
+  place-items: center;
+  border-radius: 50%;
+  color: #fff;
+  background: var(--color-brand);
+}
+
+.field-hint {
+  margin: 8px 0 14px;
+  color: #7a888f;
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.connected-bot {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px;
+  margin: -4px 0 18px;
+  border-radius: var(--radius-sm);
+  color: #23795a;
+  background: #eaf7f1;
+
+  > span:nth-child(2) {
+    display: grid;
+    flex: 1;
+    gap: 2px;
+  }
+
+  strong { font-size: 13px; }
+  small { color: #5b8c78; font-size: 11px; }
+}
+
+.danger-link,
+.close-link {
+  display: inline-flex;
+  width: 100%;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 8px;
+  margin-top: 12px;
+  border: 0;
+  color: var(--color-danger);
+  background: transparent;
+  font-size: 12px;
+}
+
+.close-link {
+  margin-top: 4px;
+  color: #65767e;
+}
+
+.modal-close {
+  position: absolute;
+  top: 9px;
+  right: 11px;
+  border: 0;
+  color: #74838b;
+  background: transparent;
+  font-size: 24px;
+}
+
+@include mixins.mobile {
+  .overlay {
+    align-items: end;
+    padding: 0;
+  }
+
+  .modal,
+  .modal.compact {
+    width: 100%;
+    max-height: min(92dvh, 620px);
+    padding: 24px 20px calc(24px + env(safe-area-inset-bottom));
+    overflow-y: auto;
+    border-radius: 14px 14px 0 0;
+  }
+}
