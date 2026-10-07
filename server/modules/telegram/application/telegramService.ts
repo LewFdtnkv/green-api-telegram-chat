@@ -1,12 +1,12 @@
 import { HttpError } from '../../../shared/errors/HttpError.js';
-import type { SendTextMessageCommand, TelegramGateway, TelegramToken } from '../domain/types.js';
+import type { SendTextMessageCommand, TelegramGateway, TelegramSession, TelegramSessionStore, TelegramToken } from '../domain/types.js';
 
 const TOKEN_PATTERN = /^\d{6,}:[A-Za-z0-9_-]{20,}$/;
 const MAX_MESSAGE_LENGTH = 4096;
 
 export type TelegramService = ReturnType<typeof createTelegramService>;
 
-export function createTelegramService(gateway: TelegramGateway) {
+export function createTelegramService(gateway: TelegramGateway, sessions: TelegramSessionStore) {
   function getValidToken(value: unknown): TelegramToken {
     if (typeof value !== 'string' || !TOKEN_PATTERN.test(value.trim())) {
       throw new HttpError(400, 'Введите корректный токен бота.');
@@ -35,9 +35,30 @@ export function createTelegramService(gateway: TelegramGateway) {
     return { chatId, text: text.trim() };
   }
 
+  function getSession(sessionId: unknown): TelegramSession {
+    if (typeof sessionId !== 'string') throw new HttpError(401, 'Сессия Telegram не найдена. Подключите бота заново.');
+    const session = sessions.find(sessionId);
+    if (!session) throw new HttpError(401, 'Сессия Telegram истекла. Подключите бота заново.');
+    return session;
+  }
+
   return {
-    getProfile: (token: unknown) => gateway.getProfile(getValidToken(token)),
-    getUpdates: (token: unknown, offset: unknown) => gateway.getUpdates(getValidToken(token), getValidOffset(offset)),
-    sendTextMessage: (token: unknown, chatId: unknown, text: unknown) => gateway.sendTextMessage(getValidToken(token), getValidCommand(chatId, text))
+    connect: async (token: unknown) => {
+      const validToken = getValidToken(token);
+      const profile = await gateway.getProfile(validToken);
+      return sessions.create(validToken, profile);
+    },
+    getProfile: async (sessionId: unknown) => getSession(sessionId).profile,
+    getUpdates: async (sessionId: unknown, offset: unknown) => {
+      const session = getSession(sessionId);
+      return gateway.getUpdates(session.token, getValidOffset(offset));
+    },
+    sendTextMessage: async (sessionId: unknown, chatId: unknown, text: unknown) => {
+      const session = getSession(sessionId);
+      return gateway.sendTextMessage(session.token, getValidCommand(chatId, text));
+    },
+    disconnect: async (sessionId: unknown) => {
+      if (typeof sessionId === 'string') sessions.delete(sessionId);
+    }
   };
 }

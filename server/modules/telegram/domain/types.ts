@@ -38,3 +38,16 @@ export interface TelegramGateway {
   getUpdates(token: TelegramToken, offset?: number): Promise<TelegramUpdate[]>;
   sendTextMessage(token: TelegramToken, command: SendTextMessageCommand): Promise<TelegramMessage>;
 }
+
+export type TelegramSession = {
+  id: string;
+  token: TelegramToken;
+  profile: TelegramBot;
+  expiresAt: number;
+};
+
+export interface TelegramSessionStore {
+  create(token: TelegramToken, profile: TelegramBot): TelegramSession;
+  find(sessionId: string): TelegramSession | null;
+  delete(sessionId: string): void;
+}

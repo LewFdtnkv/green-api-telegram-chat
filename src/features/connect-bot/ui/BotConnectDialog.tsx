@@ -4,14 +4,13 @@ import type { TelegramBot } from '../../../entities/telegram/model/types';
 
 type BotConnectDialogProps = {
   profile: TelegramBot | null;
-  token: string;
   onConnect: FormEventHandler<HTMLFormElement>;
   onClose: () => void;
   onDisconnect: () => void;
   isConnecting: boolean;
 };
 
-export function BotConnectDialog({ profile, token, onConnect, onClose, onDisconnect, isConnecting }: BotConnectDialogProps) {
+export function BotConnectDialog({ profile, onConnect, onClose, onDisconnect, isConnecting }: BotConnectDialogProps) {
   return (
     <div className="overlay">
       <section className="modal" role="dialog" aria-modal="true" aria-labelledby="settings-title">
@@ -22,12 +21,12 @@ export function BotConnectDialog({ profile, token, onConnect, onClose, onDisconn
         {profile && <div className="connected-bot"><span className="avatar">{profile.first_name.slice(0, 1) || 'B'}</span><span><strong>{profile.first_name}</strong><small>@{profile.username}</small></span><Check size={19} /></div>}
         <form onSubmit={onConnect}>
           <label htmlFor="bot-token">Токен Telegram Bot API</label>
-          <input id="bot-token" name="token" type="password" defaultValue={token} placeholder="123456789:AA..." autoComplete="off" autoFocus />
+          <input id="bot-token" name="token" type="password" placeholder="123456789:AA..." autoComplete="off" autoFocus />
           <p className="field-hint">Создайте бота через @BotFather и вставьте его токен сюда.</p>
           <button className="primary-button full" type="submit" disabled={isConnecting}>{isConnecting ? <><LoaderCircle className="spin" size={18} /> Проверяем</> : <><Bot size={18} /> Подключить</>}</button>
         </form>
         {profile && <button className="danger-link" type="button" onClick={onDisconnect}><LogOut size={17} /> Отключить бота</button>}
-        {token && <button className="close-link" type="button" onClick={onClose}><ArrowLeft size={17} /> Вернуться к чату</button>}
+        {profile && <button className="close-link" type="button" onClick={onClose}><ArrowLeft size={17} /> Вернуться к чату</button>}
       </section>
     </div>
   );
