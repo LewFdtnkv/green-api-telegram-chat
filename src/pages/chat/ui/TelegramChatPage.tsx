@@ -1,7 +1,9 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
+import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { ApiError, telegramApi } from '../../../shared/api/telegram';
 import { chatSession } from '../../../shared/lib/chatSession';
-import type { ChatId, ChatSummary, MessagesByChat, TelegramBot, TelegramMessage } from '../../../entities/telegram/model/types';
+import { telegramQueryKeys, useTelegramSession, useTelegramUpdates } from '../../../entities/telegram/api/telegramQueries';
+import type { ChatId, ChatSummary, MessagesByChat, TelegramMessage } from '../../../entities/telegram/model/types';
 import { createManualChat, upsertChat } from '../../../entities/chat/lib/chat';
 import { appendMessage } from '../../../entities/message/lib/message';
 import { BotConnectDialog } from '../../../features/connect-bot/ui/BotConnectDialog';
@@ -11,9 +13,12 @@ import { ChatWindow } from '../../../widgets/chat-window/ui/ChatWindow';
 
 type ConnectionStatus = 'disconnected' | 'connecting' | 'connected' | 'error';
 
+function isUnauthorized(error: unknown): error is ApiError {
+  return error instanceof ApiError && error.status === 401;
+}
+
 export function TelegramChatPage() {
   const [initialChatSession] = useState(() => chatSession.get());
-  const [profile, setProfile] = useState<TelegramBot | null>(null);
   const [chats, setChats] = useState<ChatSummary[]>(initialChatSession.chats);
   const [messages, setMessages] = useState<MessagesByChat>(initialChatSession.messages);
   const [selectedChatId, setSelectedChatId] = useState<ChatId | null>(initialChatSession.selectedChatId);
@@ -21,13 +26,13 @@ export function TelegramChatPage() {
   const [messageDraft, setMessageDraft] = useState('');
   const [showSettings, setShowSettings] = useState(false);
   const [showNewChat, setShowNewChat] = useState(false);
-  const [isConnecting, setIsConnecting] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [isSending, setIsSending] = useState(false);
   const [error, setError] = useState('');
-  const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>('connecting');
-  const offsetRef = useRef<number | null>(initialChatSession.offset);
-  const pollingRef = useRef(false);
+  const [isSessionAvailable, setIsSessionAvailable] = useState(true);
+  const queryClient = useQueryClient();
+  const sessionQuery = useTelegramSession(isSessionAvailable);
+  const profile = isSessionAvailable ? sessionQuery.data ?? null : null;
+  const updatesQuery = useTelegramUpdates(offset, Boolean(profile));
 
   const selectedChat = chats.find((chat) => String(chat.id) === String(selectedChatId)) || null;
   const activeMessages = useMemo(() => messages[String(selectedChatId)] || [], [messages, selectedChatId]);
@@ -37,95 +42,107 @@ export function TelegramChatPage() {
     setMessages((current) => appendMessage(current, message, direction));
   }, []);
 
+  const expireSession = useCallback(() => {
+    setIsSessionAvailable(false);
+    queryClient.removeQueries({ queryKey: telegramQueryKeys.updates });
+    setShowSettings(true);
+  }, [queryClient]);
+
+  const connectMutation = useMutation({
+    mutationFn: telegramApi.connect,
+    onSuccess: (bot) => {
+      queryClient.setQueryData(telegramQueryKeys.session, bot);
+      queryClient.removeQueries({ queryKey: telegramQueryKeys.updates });
+      chatSession.clear();
+      setIsSessionAvailable(true);
+      setChats([]);
+      setMessages({});
+      setSelectedChatId(null);
+      setOffset(null);
+      setError('');
+      setShowSettings(false);
+    },
+    onError: (requestError) => {
+      setError(requestError instanceof Error ? requestError.message : 'Не удалось подключить бота.');
+    }
+  });
+
+  const sendMutation = useMutation({
+    mutationFn: ({ chatId, text }: { chatId: ChatId; text: string }) => telegramApi.sendMessage(chatId, text),
+    onSuccess: (message) => {
+      mergeMessage(message, 'outgoing');
+      setMessageDraft('');
+      setError('');
+    },
+    onError: (requestError) => {
+      if (isUnauthorized(requestError)) {
+        expireSession();
+        return;
+      }
+      setError(requestError instanceof Error ? requestError.message : 'Не удалось отправить сообщение.');
+    }
+  });
+
+  const disconnectMutation = useMutation({ mutationFn: telegramApi.disconnect });
+
   useEffect(() => {
     chatSession.set({ chats, messages, selectedChatId, offset });
   }, [chats, messages, offset, selectedChatId]);
 
   useEffect(() => {
-    let isActive = true;
-
-    telegramApi.getSession()
-      .then((bot) => {
-        if (!isActive) return;
-        setProfile(bot);
-        setConnectionStatus('connected');
-      })
-      .catch((requestError) => {
-        if (!isActive) return;
-        if (requestError instanceof ApiError && requestError.status === 401) {
-          setConnectionStatus('disconnected');
-          setShowSettings(true);
-          return;
-        }
-        setConnectionStatus('error');
-        setError(requestError instanceof Error ? requestError.message : 'Не удалось восстановить подключение бота.');
-      });
-
-    return () => { isActive = false; };
-  }, []);
-
-  const readUpdates = useCallback(async (isManualRefresh = false) => {
-    if (!profile || pollingRef.current) return;
-    pollingRef.current = true;
-    if (isManualRefresh) setIsRefreshing(true);
-    try {
-      const updates = await telegramApi.getUpdates(offsetRef.current);
-      let nextOffset = offsetRef.current;
-      updates.forEach((update) => {
-        nextOffset = Math.max(nextOffset || 0, update.update_id + 1);
-        if (update.message?.text) mergeMessage(update.message, 'incoming');
-      });
-      offsetRef.current = nextOffset;
-      if (nextOffset !== offset) setOffset(nextOffset);
-      setConnectionStatus('connected');
-      setError('');
-    } catch (requestError) {
-      if (requestError instanceof ApiError && requestError.status === 401) {
-        setProfile(null);
-        setConnectionStatus('disconnected');
-        setShowSettings(true);
-        return;
-      }
-      setConnectionStatus('error');
-      setError(requestError instanceof Error ? requestError.message : 'Не удалось получить сообщения.');
-    } finally {
-      pollingRef.current = false;
-      if (isManualRefresh) setIsRefreshing(false);
+    if (!sessionQuery.error) return;
+    if (isUnauthorized(sessionQuery.error)) {
+      expireSession();
+      return;
     }
-  }, [mergeMessage, offset, profile]);
+    setError(sessionQuery.error instanceof Error ? sessionQuery.error.message : 'Не удалось восстановить подключение бота.');
+  }, [expireSession, sessionQuery.error]);
 
   useEffect(() => {
-    if (!profile) return undefined;
-    readUpdates();
-    const timer = window.setInterval(readUpdates, 3000);
-    return () => window.clearInterval(timer);
-  }, [profile, readUpdates]);
+    if (!updatesQuery.data?.length) return;
+    let nextOffset = offset;
+    updatesQuery.data.forEach((update) => {
+      nextOffset = Math.max(nextOffset || 0, update.update_id + 1);
+      if (update.message?.text) mergeMessage(update.message, 'incoming');
+    });
+    if (nextOffset !== offset) setOffset(nextOffset);
+    setError('');
+  }, [mergeMessage, offset, updatesQuery.data]);
 
-  async function connect(event: FormEvent<HTMLFormElement>) {
+  useEffect(() => {
+    if (!updatesQuery.error) return;
+    if (isUnauthorized(updatesQuery.error)) {
+      expireSession();
+      return;
+    }
+    setError(updatesQuery.error instanceof Error ? updatesQuery.error.message : 'Не удалось получить сообщения.');
+  }, [expireSession, updatesQuery.error]);
+
+  const connectionStatus: ConnectionStatus = connectMutation.isPending || (isSessionAvailable && sessionQuery.isPending)
+    ? 'connecting'
+    : profile
+      ? 'connected'
+      : connectMutation.isError || (isSessionAvailable && Boolean(sessionQuery.error))
+        ? 'error'
+        : 'disconnected';
+
+  async function refreshUpdates() {
+    if (!profile) {
+      setShowSettings(true);
+      return;
+    }
+    setIsRefreshing(true);
+    await updatesQuery.refetch();
+    setIsRefreshing(false);
+  }
+
+  function connect(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const tokenValue = new FormData(event.currentTarget).get('token');
-    const nextToken = typeof tokenValue === 'string' ? tokenValue.trim() : '';
-    if (!nextToken) return;
+    const token = typeof tokenValue === 'string' ? tokenValue.trim() : '';
+    if (!token) return;
     setError('');
-    setIsConnecting(true);
-    setConnectionStatus('connecting');
-    try {
-      const bot = await telegramApi.connect(nextToken);
-      chatSession.clear();
-      offsetRef.current = null;
-      setChats([]);
-      setMessages({});
-      setSelectedChatId(null);
-      setOffset(null);
-      setProfile(bot);
-      setConnectionStatus('connected');
-      setShowSettings(false);
-    } catch (requestError) {
-      setConnectionStatus('error');
-      setError(requestError instanceof Error ? requestError.message : 'Не удалось подключить бота.');
-    } finally {
-      setIsConnecting(false);
-    }
+    connectMutation.mutate(token);
   }
 
   function addChat(event: FormEvent<HTMLFormElement>) {
@@ -138,50 +155,35 @@ export function TelegramChatPage() {
     setShowNewChat(false);
   }
 
-  async function sendMessage(event: FormEvent<HTMLFormElement>) {
+  function sendMessage(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!profile || !selectedChat || !messageDraft.trim() || isSending) return;
+    if (!profile || !selectedChat || !messageDraft.trim() || sendMutation.isPending) return;
     setError('');
-    setIsSending(true);
-    try {
-      const message = await telegramApi.sendMessage(selectedChat.id, messageDraft);
-      mergeMessage(message, 'outgoing');
-      setMessageDraft('');
-    } catch (requestError) {
-      if (requestError instanceof ApiError && requestError.status === 401) {
-        setProfile(null);
-        setConnectionStatus('disconnected');
-        setShowSettings(true);
-        return;
-      }
-      setError(requestError instanceof Error ? requestError.message : 'Не удалось отправить сообщение.');
-    } finally {
-      setIsSending(false);
-    }
+    sendMutation.mutate({ chatId: selectedChat.id, text: messageDraft });
   }
 
-  async function disconnect() {
-    await telegramApi.disconnect().catch(() => undefined);
+  function disconnect() {
+    disconnectMutation.mutate();
+    queryClient.removeQueries({ queryKey: telegramQueryKeys.session });
+    queryClient.removeQueries({ queryKey: telegramQueryKeys.updates });
     chatSession.clear();
-    offsetRef.current = null;
-    setProfile(null);
+    setIsSessionAvailable(false);
     setChats([]);
     setMessages({});
     setSelectedChatId(null);
     setOffset(null);
-    setConnectionStatus('disconnected');
     setShowSettings(false);
     setError('');
   }
 
   return (
     <main className="app-shell">
-      <ChatSidebar profile={profile} chats={chats} selectedChatId={selectedChatId} connectionStatus={connectionStatus} isRefreshing={isRefreshing} onSelect={setSelectedChatId} onOpenSettings={() => setShowSettings(true)} onOpenNewChat={() => setShowNewChat(true)} onRefresh={() => readUpdates(true)} />
+      <ChatSidebar profile={profile} chats={chats} selectedChatId={selectedChatId} connectionStatus={connectionStatus} isRefreshing={isRefreshing} onSelect={setSelectedChatId} onOpenSettings={() => setShowSettings(true)} onOpenNewChat={() => setShowNewChat(true)} onRefresh={refreshUpdates} />
       <section className={`chat-panel ${selectedChat ? 'open' : ''}`}>
-        <ChatWindow chat={selectedChat} messages={activeMessages} draft={messageDraft} isSending={isSending} isConnected={Boolean(profile)} connectionStatus={connectionStatus} onDraftChange={setMessageDraft} onSend={sendMessage} onBack={() => setSelectedChatId(null)} onOpenNewChat={() => setShowNewChat(true)} onOpenSettings={() => setShowSettings(true)} />
+        <ChatWindow chat={selectedChat} messages={activeMessages} draft={messageDraft} isSending={sendMutation.isPending} isConnected={Boolean(profile)} connectionStatus={connectionStatus} onDraftChange={setMessageDraft} onSend={sendMessage} onBack={() => setSelectedChatId(null)} onOpenNewChat={() => setShowNewChat(true)} onOpenSettings={() => setShowSettings(true)} />
       </section>
       {error && <div className="toast" role="alert"><span>{error}</span><button type="button" onClick={() => setError('')} aria-label="Закрыть">×</button></div>}
-      {showSettings && <BotConnectDialog profile={profile} onConnect={connect} onClose={() => setShowSettings(false)} onDisconnect={disconnect} isConnecting={isConnecting} />}
+      {showSettings && <BotConnectDialog profile={profile} onConnect={connect} onClose={() => setShowSettings(false)} onDisconnect={disconnect} isConnecting={connectMutation.isPending} />}
       {showNewChat && <AddChatDialog onSubmit={addChat} onClose={() => setShowNewChat(false)} />}
     </main>
   );
