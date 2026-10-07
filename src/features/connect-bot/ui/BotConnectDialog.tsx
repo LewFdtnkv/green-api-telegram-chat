@@ -12,8 +12,8 @@ type BotConnectDialogProps = {
 
 export function BotConnectDialog({ profile, onConnect, onClose, onDisconnect, isConnecting }: BotConnectDialogProps) {
   return (
-    <div className="overlay">
-      <section className="modal" role="dialog" aria-modal="true" aria-labelledby="settings-title">
+    <div className="overlay" onClick={onClose}>
+      <section className="modal" role="dialog" aria-modal="true" aria-labelledby="settings-title" onClick={(event) => event.stopPropagation()}>
         <div className="modal-heading">
           <div className="modal-icon"><KeyRound size={21} /></div>
           <div><h2 id="settings-title">Подключение бота</h2><p>Токен используется только в текущей сессии.</p></div>
