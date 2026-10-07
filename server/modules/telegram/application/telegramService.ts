@@ -35,9 +35,9 @@ export function createTelegramService(gateway: TelegramGateway, sessions: Telegr
     return { chatId, text: text.trim() };
   }
 
-  function getSession(sessionId: unknown): TelegramSession {
+  async function getSession(sessionId: unknown): Promise<TelegramSession> {
     if (typeof sessionId !== 'string') throw new HttpError(401, 'Сессия Telegram не найдена. Подключите бота заново.');
-    const session = sessions.find(sessionId);
+    const session = await sessions.find(sessionId);
     if (!session) throw new HttpError(401, 'Сессия Telegram истекла. Подключите бота заново.');
     return session;
   }
@@ -48,17 +48,17 @@ export function createTelegramService(gateway: TelegramGateway, sessions: Telegr
       const profile = await gateway.getProfile(validToken);
       return sessions.create(validToken, profile);
     },
-    getProfile: async (sessionId: unknown) => getSession(sessionId).profile,
+    getProfile: async (sessionId: unknown) => (await getSession(sessionId)).profile,
     getUpdates: async (sessionId: unknown, offset: unknown) => {
-      const session = getSession(sessionId);
+      const session = await getSession(sessionId);
       return gateway.getUpdates(session.token, getValidOffset(offset));
     },
     sendTextMessage: async (sessionId: unknown, chatId: unknown, text: unknown) => {
-      const session = getSession(sessionId);
+      const session = await getSession(sessionId);
       return gateway.sendTextMessage(session.token, getValidCommand(chatId, text));
     },
     disconnect: async (sessionId: unknown) => {
-      if (typeof sessionId === 'string') sessions.delete(sessionId);
+      if (typeof sessionId === 'string') await sessions.delete(sessionId);
     }
   };
 }

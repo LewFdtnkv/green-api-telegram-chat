@@ -67,3 +67,13 @@ docker compose up --build
 Приложение будет доступно по адресу `http://localhost:8080`. Backend наружу не публикуется.
 
 Для инфраструктурной проверки без токена доступен `GET /api/health` через Nginx.
+
+## Cloudflare Workers
+
+Для бесплатного внешнего запуска проект можно развернуть как один Cloudflare Worker: он отдаёт React-сборку и обслуживает API. Сессии Telegram сохраняются в SQLite-backed Durable Object, поэтому не зависят от жизненного цикла отдельного процесса.
+
+1. Создайте бесплатный аккаунт Cloudflare.
+2. Выполните `npx wrangler login` и подтвердите доступ в браузере.
+3. Выполните `npm run deploy:cloudflare`.
+
+После публикации Wrangler выведет постоянный адрес вида `https://telegram-inbox.<account>.workers.dev`.

@@ -1,0 +1,24 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "telegram-inbox",
+  "main": "./cloudflare/worker.ts",
+  "compatibility_date": "2026-10-07",
+  "assets": {
+    "directory": "./dist",
+    "run_worker_first": ["/api/*"]
+  },
+  "durable_objects": {
+    "bindings": [
+      {
+        "name": "TELEGRAM_SESSIONS",
+        "class_name": "TelegramSessions"
+      }
+    ]
+  },
+  "migrations": [
+    {
+      "tag": "v1",
+      "new_sqlite_classes": ["TelegramSessions"]
+    }
+  ]
+}

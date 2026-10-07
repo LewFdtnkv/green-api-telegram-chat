@@ -7,11 +7,13 @@
     "dev": "concurrently \"tsx watch server/index.ts\" \"vite\"",
     "dev:client": "vite",
     "dev:server": "tsx watch server/index.ts",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "tsc --noEmit && tsc -p tsconfig.cloudflare.json",
     "test": "tsx --test server/modules/telegram/application/telegramService.test.ts",
     "build": "npm run build:client && npm run build:server",
     "build:client": "vite build",
     "build:server": "tsc -p tsconfig.server.json",
+    "build:cloudflare": "npm run build:client",
+    "deploy:cloudflare": "npm run build:cloudflare && wrangler deploy",
     "start": "node build-server/index.js"
   },
   "dependencies": {
@@ -22,6 +24,7 @@
     "react-dom": "^18.3.1"
   },
   "devDependencies": {
+    "@cloudflare/workers-types": "^5.20261007.1",
     "@types/express": "^5.0.1",
     "@types/node": "^22.10.1",
     "@types/react": "^18.3.12",
@@ -31,6 +34,7 @@
     "sass": "^1.83.4",
     "tsx": "^4.19.2",
     "typescript": "^5.7.2",
-    "vite": "^6.0.5"
+    "vite": "^6.0.5",
+    "wrangler": "^4.148.0"
   }
 }

@@ -47,7 +47,7 @@ export type TelegramSession = {
 };
 
 export interface TelegramSessionStore {
-  create(token: TelegramToken, profile: TelegramBot): TelegramSession;
-  find(sessionId: string): TelegramSession | null;
-  delete(sessionId: string): void;
+  create(token: TelegramToken, profile: TelegramBot): Promise<TelegramSession>;
+  find(sessionId: string): Promise<TelegramSession | null>;
+  delete(sessionId: string): Promise<void>;
 }

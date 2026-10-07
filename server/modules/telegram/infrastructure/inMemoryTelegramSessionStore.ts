@@ -13,17 +13,17 @@ export function createInMemoryTelegramSessionStore(lifetimeMs = EIGHT_HOURS): Te
   }
 
   return {
-    create(token: TelegramToken, profile: TelegramBot) {
+    async create(token: TelegramToken, profile: TelegramBot) {
       removeExpiredSessions();
       const session: TelegramSession = { id: randomUUID(), token, profile, expiresAt: Date.now() + lifetimeMs };
       sessions.set(session.id, session);
       return session;
     },
-    find(sessionId: string) {
+    async find(sessionId: string) {
       removeExpiredSessions();
       return sessions.get(sessionId) || null;
     },
-    delete(sessionId: string) {
+    async delete(sessionId: string) {
       sessions.delete(sessionId);
     }
   };
