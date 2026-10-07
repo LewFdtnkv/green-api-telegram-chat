@@ -10,6 +10,8 @@ type ChatWindowProps = {
   draft: string;
   isSending: boolean;
   isConnected: boolean;
+  isPolling: boolean;
+  connectionStatus: 'disconnected' | 'connecting' | 'connected' | 'error';
   onDraftChange: (value: string) => void;
   onSend: FormEventHandler<HTMLFormElement>;
   onBack: () => void;
@@ -17,7 +19,7 @@ type ChatWindowProps = {
   onOpenSettings: () => void;
 };
 
-export function ChatWindow({ chat, messages, draft, isSending, isConnected, onDraftChange, onSend, onBack, onOpenNewChat, onOpenSettings }: ChatWindowProps) {
+export function ChatWindow({ chat, messages, draft, isSending, isConnected, isPolling, connectionStatus, onDraftChange, onSend, onBack, onOpenNewChat, onOpenSettings }: ChatWindowProps) {
   if (!chat) return <Welcome isConnected={isConnected} onOpenNewChat={onOpenNewChat} onOpenSettings={onOpenSettings} />;
   const handleDraftChange: ChangeEventHandler<HTMLTextAreaElement> = (event) => onDraftChange(event.target.value);
   return (
@@ -29,7 +31,7 @@ export function ChatWindow({ chat, messages, draft, isSending, isConnected, onDr
         <button className="icon-button quiet header-action" type="button" title="Изменить чат" onClick={onOpenNewChat}><PencilLine size={18} /></button>
       </header>
       <div className="message-area">
-        <div className="notice"><Check size={15} /> Получаются только текстовые сообщения</div>
+        <div className={`notice ${connectionStatus === 'error' ? 'notice-error' : ''}`}><Check size={15} /> {connectionStatus === 'error' ? 'Проверьте подключение к Telegram' : isPolling ? 'Получаем новые сообщения' : 'Получаются только текстовые сообщения'}</div>
         {messages.map((message) => <article key={message.message_id} className={`message ${message.direction === 'outgoing' ? 'outgoing' : 'incoming'}`}><p>{message.text}</p><time>{formatMessageTime(message.date)}{message.direction === 'outgoing' && <Check size={14} />}</time></article>)}
         {messages.length === 0 && <div className="chat-empty"><MessageCircleMore size={34} /><p>Напишите первое сообщение</p></div>}
       </div>

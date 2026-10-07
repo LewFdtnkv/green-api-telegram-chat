@@ -12,6 +12,7 @@ export function createServer() {
 
   app.use(cors());
   app.use(express.json({ limit: '32kb' }));
+  app.get('/api/health', (_request, response) => response.json({ status: 'ok' }));
   app.use('/api/telegram', createTelegramRouter(telegramService));
   app.use(errorHandler);
 

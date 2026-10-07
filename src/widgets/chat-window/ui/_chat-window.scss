@@ -38,6 +38,11 @@
   color: #56736f;
   background: #e3f1ee;
   font-size: 11px;
+
+  &.notice-error {
+    color: #98454b;
+    background: #f8e1e2;
+  }
 }
 
 .message {

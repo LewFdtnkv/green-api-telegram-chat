@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import { telegramApi } from '../../../shared/api/telegram';
+import { chatSession } from '../../../shared/lib/chatSession';
 import { tokenSession } from '../../../shared/lib/session';
 import type { ChatId, ChatSummary, MessagesByChat, TelegramBot, TelegramMessage } from '../../../entities/telegram/model/types';
 import { createManualChat, upsertChat } from '../../../entities/chat/lib/chat';
@@ -9,12 +10,16 @@ import { AddChatDialog } from '../../../features/add-chat/ui/AddChatDialog';
 import { ChatSidebar } from '../../../widgets/chat-sidebar/ui/ChatSidebar';
 import { ChatWindow } from '../../../widgets/chat-window/ui/ChatWindow';
 
+type ConnectionStatus = 'disconnected' | 'connecting' | 'connected' | 'error';
+
 export function TelegramChatPage() {
   const [token, setToken] = useState<string>(tokenSession.get);
+  const [initialChatSession] = useState(() => chatSession.get());
   const [profile, setProfile] = useState<TelegramBot | null>(null);
-  const [chats, setChats] = useState<ChatSummary[]>([]);
-  const [messages, setMessages] = useState<MessagesByChat>({});
-  const [selectedChatId, setSelectedChatId] = useState<ChatId | null>(null);
+  const [chats, setChats] = useState<ChatSummary[]>(initialChatSession.chats);
+  const [messages, setMessages] = useState<MessagesByChat>(initialChatSession.messages);
+  const [selectedChatId, setSelectedChatId] = useState<ChatId | null>(initialChatSession.selectedChatId);
+  const [offset, setOffset] = useState<number | null>(initialChatSession.offset);
   const [messageDraft, setMessageDraft] = useState('');
   const [showSettings, setShowSettings] = useState(() => !tokenSession.get());
   const [showNewChat, setShowNewChat] = useState(false);
@@ -22,7 +27,8 @@ export function TelegramChatPage() {
   const [isPolling, setIsPolling] = useState(false);
   const [isSending, setIsSending] = useState(false);
   const [error, setError] = useState('');
-  const offsetRef = useRef<number | null>(null);
+  const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>(() => tokenSession.get() ? 'connecting' : 'disconnected');
+  const offsetRef = useRef<number | null>(initialChatSession.offset);
   const pollingRef = useRef(false);
 
   const selectedChat = chats.find((chat) => String(chat.id) === String(selectedChatId)) || null;
@@ -33,31 +39,60 @@ export function TelegramChatPage() {
     setMessages((current) => appendMessage(current, message, direction));
   }, []);
 
+  useEffect(() => {
+    chatSession.set({ chats, messages, selectedChatId, offset });
+  }, [chats, messages, offset, selectedChatId]);
+
+  useEffect(() => {
+    if (!token || profile) return;
+    let isActive = true;
+    setConnectionStatus('connecting');
+
+    telegramApi.getProfile(token)
+      .then((bot) => {
+        if (!isActive) return;
+        setProfile(bot);
+        setConnectionStatus('connected');
+      })
+      .catch((requestError) => {
+        if (!isActive) return;
+        setConnectionStatus('error');
+        setError(requestError instanceof Error ? requestError.message : 'Не удалось восстановить подключение бота.');
+      });
+
+    return () => { isActive = false; };
+  }, [profile, token]);
+
   const readUpdates = useCallback(async () => {
-    if (!token || pollingRef.current) return;
+    if (!token || !profile || pollingRef.current) return;
     pollingRef.current = true;
     setIsPolling(true);
     try {
       const updates = await telegramApi.getUpdates(token, offsetRef.current);
+      let nextOffset = offsetRef.current;
       updates.forEach((update) => {
-        offsetRef.current = Math.max(offsetRef.current || 0, update.update_id + 1);
+        nextOffset = Math.max(nextOffset || 0, update.update_id + 1);
         if (update.message?.text) mergeMessage(update.message, 'incoming');
       });
+      offsetRef.current = nextOffset;
+      if (nextOffset !== offset) setOffset(nextOffset);
+      setConnectionStatus('connected');
       setError('');
     } catch (requestError) {
+      setConnectionStatus('error');
       setError(requestError instanceof Error ? requestError.message : 'Не удалось получить сообщения.');
     } finally {
       pollingRef.current = false;
       setIsPolling(false);
     }
-  }, [mergeMessage, token]);
+  }, [mergeMessage, offset, profile, token]);
 
   useEffect(() => {
-    if (!token) return undefined;
+    if (!token || !profile) return undefined;
     readUpdates();
     const timer = window.setInterval(readUpdates, 5000);
     return () => window.clearInterval(timer);
-  }, [readUpdates, token]);
+  }, [profile, readUpdates, token]);
 
   async function connect(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -66,13 +101,24 @@ export function TelegramChatPage() {
     if (!nextToken) return;
     setError('');
     setIsConnecting(true);
+    setConnectionStatus('connecting');
     try {
       const bot = await telegramApi.getProfile(nextToken);
+      if (nextToken !== token) {
+        chatSession.clear();
+        offsetRef.current = null;
+        setChats([]);
+        setMessages({});
+        setSelectedChatId(null);
+        setOffset(null);
+      }
       tokenSession.set(nextToken);
       setToken(nextToken);
       setProfile(bot);
+      setConnectionStatus('connected');
       setShowSettings(false);
     } catch (requestError) {
+      setConnectionStatus('error');
       setError(requestError instanceof Error ? requestError.message : 'Не удалось подключить бота.');
     } finally {
       setIsConnecting(false);
@@ -107,21 +153,24 @@ export function TelegramChatPage() {
 
   function disconnect() {
     tokenSession.clear();
+    chatSession.clear();
     offsetRef.current = null;
     setToken('');
     setProfile(null);
     setChats([]);
     setMessages({});
     setSelectedChatId(null);
+    setOffset(null);
+    setConnectionStatus('disconnected');
     setShowSettings(true);
     setError('');
   }
 
   return (
     <main className="app-shell">
-      <ChatSidebar profile={profile} chats={chats} selectedChatId={selectedChatId} isConnected={Boolean(token)} isPolling={isPolling} onSelect={setSelectedChatId} onOpenSettings={() => setShowSettings(true)} onOpenNewChat={() => setShowNewChat(true)} onRefresh={readUpdates} />
+      <ChatSidebar profile={profile} chats={chats} selectedChatId={selectedChatId} connectionStatus={connectionStatus} isPolling={isPolling} onSelect={setSelectedChatId} onOpenSettings={() => setShowSettings(true)} onOpenNewChat={() => setShowNewChat(true)} onRefresh={readUpdates} />
       <section className={`chat-panel ${selectedChat ? 'open' : ''}`}>
-        <ChatWindow chat={selectedChat} messages={activeMessages} draft={messageDraft} isSending={isSending} isConnected={Boolean(token)} onDraftChange={setMessageDraft} onSend={sendMessage} onBack={() => setSelectedChatId(null)} onOpenNewChat={() => setShowNewChat(true)} onOpenSettings={() => setShowSettings(true)} />
+        <ChatWindow chat={selectedChat} messages={activeMessages} draft={messageDraft} isSending={isSending} isConnected={Boolean(token)} isPolling={isPolling} connectionStatus={connectionStatus} onDraftChange={setMessageDraft} onSend={sendMessage} onBack={() => setSelectedChatId(null)} onOpenNewChat={() => setShowNewChat(true)} onOpenSettings={() => setShowSettings(true)} />
       </section>
       {error && <div className="toast" role="alert"><span>{error}</span><button type="button" onClick={() => setError('')} aria-label="Закрыть">×</button></div>}
       {showSettings && <BotConnectDialog profile={profile} token={token} onConnect={connect} onClose={() => setShowSettings(false)} onDisconnect={disconnect} isConnecting={isConnecting} />}

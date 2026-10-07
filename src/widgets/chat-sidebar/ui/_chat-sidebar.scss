@@ -145,6 +145,16 @@
     background: var(--color-success);
     box-shadow: 0 0 0 3px #e2f6eb;
   }
+
+  &.connecting {
+    background: #d2a341;
+    box-shadow: 0 0 0 3px #fbf2d9;
+  }
+
+  &.error {
+    background: var(--color-danger);
+    box-shadow: 0 0 0 3px #f8e1e2;
+  }
 }
 
 @include mixins.mobile {
