@@ -35,8 +35,8 @@ export function ChatWindow({ chat, messages, draft, isSending, isConnected, conn
         {messages.length === 0 && <div className="chat-empty"><MessageCircleMore size={34} /><p>Напишите первое сообщение</p></div>}
       </div>
       <form className="composer" onSubmit={onSend}>
-        <textarea value={draft} onChange={handleDraftChange} placeholder="Сообщение" rows={1} maxLength={4096} onKeyDown={(event) => { if (event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); event.currentTarget.form?.requestSubmit(); } }} />
-        <button className="send-button" type="submit" title="Отправить" disabled={!draft.trim() || isSending}>{isSending ? <LoaderCircle className="spin" size={20} /> : <SendHorizonal size={20} />}</button>
+        <textarea value={draft} onChange={handleDraftChange} placeholder="Сообщение" rows={1} maxLength={4096} disabled={!isConnected} onKeyDown={(event) => { if (event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); event.currentTarget.form?.requestSubmit(); } }} />
+        <button className="send-button" type="submit" title="Отправить" disabled={!isConnected || !draft.trim() || isSending}>{isSending ? <LoaderCircle className="spin" size={20} /> : <SendHorizonal size={20} />}</button>
       </form>
     </>
   );

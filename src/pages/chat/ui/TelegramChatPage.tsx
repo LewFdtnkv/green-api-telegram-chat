@@ -54,6 +54,7 @@ export function TelegramChatPage() {
         if (!isActive) return;
         if (requestError instanceof ApiError && requestError.status === 401) {
           setConnectionStatus('disconnected');
+          setShowSettings(true);
           return;
         }
         setConnectionStatus('error');
@@ -79,6 +80,12 @@ export function TelegramChatPage() {
       setConnectionStatus('connected');
       setError('');
     } catch (requestError) {
+      if (requestError instanceof ApiError && requestError.status === 401) {
+        setProfile(null);
+        setConnectionStatus('disconnected');
+        setShowSettings(true);
+        return;
+      }
       setConnectionStatus('error');
       setError(requestError instanceof Error ? requestError.message : 'Не удалось получить сообщения.');
     } finally {
@@ -133,7 +140,7 @@ export function TelegramChatPage() {
 
   async function sendMessage(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!selectedChat || !messageDraft.trim() || isSending) return;
+    if (!profile || !selectedChat || !messageDraft.trim() || isSending) return;
     setError('');
     setIsSending(true);
     try {
@@ -141,6 +148,12 @@ export function TelegramChatPage() {
       mergeMessage(message, 'outgoing');
       setMessageDraft('');
     } catch (requestError) {
+      if (requestError instanceof ApiError && requestError.status === 401) {
+        setProfile(null);
+        setConnectionStatus('disconnected');
+        setShowSettings(true);
+        return;
+      }
       setError(requestError instanceof Error ? requestError.message : 'Не удалось отправить сообщение.');
     } finally {
       setIsSending(false);
