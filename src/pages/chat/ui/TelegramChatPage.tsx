@@ -24,7 +24,7 @@ export function TelegramChatPage() {
   const [showSettings, setShowSettings] = useState(() => !tokenSession.get());
   const [showNewChat, setShowNewChat] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
-  const [isPolling, setIsPolling] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [isSending, setIsSending] = useState(false);
   const [error, setError] = useState('');
   const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>(() => tokenSession.get() ? 'connecting' : 'disconnected');
@@ -63,10 +63,10 @@ export function TelegramChatPage() {
     return () => { isActive = false; };
   }, [profile, token]);
 
-  const readUpdates = useCallback(async () => {
+  const readUpdates = useCallback(async (isManualRefresh = false) => {
     if (!token || !profile || pollingRef.current) return;
     pollingRef.current = true;
-    setIsPolling(true);
+    if (isManualRefresh) setIsRefreshing(true);
     try {
       const updates = await telegramApi.getUpdates(token, offsetRef.current);
       let nextOffset = offsetRef.current;
@@ -83,7 +83,7 @@ export function TelegramChatPage() {
       setError(requestError instanceof Error ? requestError.message : 'Не удалось получить сообщения.');
     } finally {
       pollingRef.current = false;
-      setIsPolling(false);
+      if (isManualRefresh) setIsRefreshing(false);
     }
   }, [mergeMessage, offset, profile, token]);
 
@@ -168,9 +168,9 @@ export function TelegramChatPage() {
 
   return (
     <main className="app-shell">
-      <ChatSidebar profile={profile} chats={chats} selectedChatId={selectedChatId} connectionStatus={connectionStatus} isPolling={isPolling} onSelect={setSelectedChatId} onOpenSettings={() => setShowSettings(true)} onOpenNewChat={() => setShowNewChat(true)} onRefresh={readUpdates} />
+      <ChatSidebar profile={profile} chats={chats} selectedChatId={selectedChatId} connectionStatus={connectionStatus} isRefreshing={isRefreshing} onSelect={setSelectedChatId} onOpenSettings={() => setShowSettings(true)} onOpenNewChat={() => setShowNewChat(true)} onRefresh={() => readUpdates(true)} />
       <section className={`chat-panel ${selectedChat ? 'open' : ''}`}>
-        <ChatWindow chat={selectedChat} messages={activeMessages} draft={messageDraft} isSending={isSending} isConnected={Boolean(token)} isPolling={isPolling} connectionStatus={connectionStatus} onDraftChange={setMessageDraft} onSend={sendMessage} onBack={() => setSelectedChatId(null)} onOpenNewChat={() => setShowNewChat(true)} onOpenSettings={() => setShowSettings(true)} />
+        <ChatWindow chat={selectedChat} messages={activeMessages} draft={messageDraft} isSending={isSending} isConnected={Boolean(token)} connectionStatus={connectionStatus} onDraftChange={setMessageDraft} onSend={sendMessage} onBack={() => setSelectedChatId(null)} onOpenNewChat={() => setShowNewChat(true)} onOpenSettings={() => setShowSettings(true)} />
       </section>
       {error && <div className="toast" role="alert"><span>{error}</span><button type="button" onClick={() => setError('')} aria-label="Закрыть">×</button></div>}
       {showSettings && <BotConnectDialog profile={profile} token={token} onConnect={connect} onClose={() => setShowSettings(false)} onDisconnect={disconnect} isConnecting={isConnecting} />}
