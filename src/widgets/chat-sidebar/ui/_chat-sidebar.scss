@@ -16,7 +16,7 @@
   padding: 14px 16px;
   border-bottom: 1px solid #e6ebed;
 
-  .brand-copy {
+  > div:nth-child(2) {
     display: grid;
     min-width: 0;
     gap: 2px;
@@ -32,7 +32,7 @@
     white-space: nowrap;
   }
 
-  .settings-button { margin-left: auto; }
+  .icon-button { margin-left: auto; }
 }
 
 .brand-mark {
@@ -57,8 +57,6 @@
   padding: 0 14px;
   font-size: 14px;
 }
-
-.collapse-button { flex: 0 0 auto; }
 
 .chat-list {
   flex: 1;
@@ -129,54 +127,6 @@
   border-top: 1px solid #e6ebed;
 }
 
-.sidebar.is-collapsed {
-  .brand-row {
-    gap: 0;
-    justify-content: center;
-    padding-inline: 4px;
-  }
-
-  .brand-copy,
-  .settings-button,
-  .new-chat-button span,
-  .chat-copy,
-  .chat-item time,
-  .sidebar-footer .connection-state { display: none; }
-
-  .sidebar-actions {
-    align-items: center;
-    flex-direction: column;
-    padding: 14px;
-  }
-
-  .new-chat-button {
-    width: 48px;
-    min-height: 42px;
-    flex: 0 0 42px;
-    justify-content: center;
-    padding: 0;
-  }
-
-  .chat-list { padding-inline: 12px; }
-
-  .chat-item {
-    display: flex;
-    justify-content: center;
-    padding: 8px 0;
-  }
-
-  .sidebar-footer { justify-content: center; padding-inline: 0; }
-
-  .sidebar-footer .icon-button { display: none; }
-
-  .empty-list {
-    margin-inline: 0;
-
-    p,
-    span { display: none; }
-  }
-}
-
 .connection-state {
   display: flex;
   align-items: center;
@@ -210,47 +160,4 @@
 @include mixins.mobile {
   .sidebar { min-height: 100dvh; }
   .brand-row { padding-top: max(14px, env(safe-area-inset-top)); }
-
-  .sidebar.is-collapsed {
-    .brand-row {
-      justify-content: flex-start;
-      gap: 11px;
-      padding-inline: 16px;
-    }
-
-    .brand-copy,
-    .chat-copy { display: grid; }
-
-    .settings-button,
-    .new-chat-button span,
-    .sidebar-footer .connection-state { display: flex; }
-
-    .chat-item time { display: block; }
-    .sidebar-footer .icon-button { display: inline-flex; }
-
-    .sidebar-actions {
-      align-items: stretch;
-      flex-direction: row;
-      padding: 14px 16px 10px;
-    }
-
-    .new-chat-button {
-      width: auto;
-      min-height: 38px;
-      flex: 1;
-      padding: 0 14px;
-    }
-
-    .chat-list { padding-inline: 8px; }
-
-    .chat-item {
-      display: grid;
-      justify-content: initial;
-      padding: 10px 8px;
-    }
-
-    .sidebar-footer { justify-content: space-between; padding-inline: 17px 12px; }
-  }
-
-  .collapse-button { display: none; }
 }

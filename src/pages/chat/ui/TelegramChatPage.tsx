@@ -12,11 +12,6 @@ import { ChatSidebar } from '../../../widgets/chat-sidebar/ui/ChatSidebar';
 import { ChatWindow } from '../../../widgets/chat-window/ui/ChatWindow';
 
 type ConnectionStatus = 'disconnected' | 'connecting' | 'connected' | 'error';
-const SIDEBAR_COLLAPSED_KEY = 'telegram-inbox-sidebar-collapsed';
-
-function getInitialSidebarState(): boolean {
-  return window.localStorage.getItem(SIDEBAR_COLLAPSED_KEY) === 'true';
-}
 
 function isUnauthorized(error: unknown): error is ApiError {
   return error instanceof ApiError && error.status === 401;
@@ -31,7 +26,6 @@ export function TelegramChatPage() {
   const [showSettings, setShowSettings] = useState(false);
   const [showNewChat, setShowNewChat] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(getInitialSidebarState);
   const [error, setError] = useState('');
   const [isSessionAvailable, setIsSessionAvailable] = useState(true);
   const queryClient = useQueryClient();
@@ -95,10 +89,6 @@ export function TelegramChatPage() {
   useEffect(() => {
     chatSession.set({ chats, messages, selectedChatId });
   }, [chats, messages, selectedChatId]);
-
-  useEffect(() => {
-    window.localStorage.setItem(SIDEBAR_COLLAPSED_KEY, String(isSidebarCollapsed));
-  }, [isSidebarCollapsed]);
 
   useEffect(() => {
     if (!sessionQuery.error) return;
@@ -186,8 +176,8 @@ export function TelegramChatPage() {
   }
 
   return (
-    <main className={`app-shell ${isSidebarCollapsed ? 'sidebar-collapsed' : ''}`}>
-      <ChatSidebar profile={profile} chats={chats} selectedChatId={selectedChatId} connectionStatus={connectionStatus} isRefreshing={isRefreshing} isCollapsed={isSidebarCollapsed} onSelect={setSelectedChatId} onToggleCollapse={() => setIsSidebarCollapsed((current) => !current)} onOpenSettings={() => setShowSettings(true)} onOpenNewChat={() => setShowNewChat(true)} onRefresh={refreshUpdates} />
+    <main className="app-shell">
+      <ChatSidebar profile={profile} chats={chats} selectedChatId={selectedChatId} connectionStatus={connectionStatus} isRefreshing={isRefreshing} onSelect={setSelectedChatId} onOpenSettings={() => setShowSettings(true)} onOpenNewChat={() => setShowNewChat(true)} onRefresh={refreshUpdates} />
       <section className={`chat-panel ${selectedChat ? 'open' : ''}`}>
         <ChatWindow chat={selectedChat} messages={activeMessages} draft={messageDraft} isSending={sendMutation.isPending} isConnected={Boolean(profile)} connectionStatus={connectionStatus} onDraftChange={setMessageDraft} onSend={sendMessage} onBack={() => setSelectedChatId(null)} onOpenNewChat={() => setShowNewChat(true)} onOpenSettings={() => setShowSettings(true)} />
       </section>
