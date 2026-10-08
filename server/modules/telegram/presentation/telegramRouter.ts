@@ -32,6 +32,10 @@ export function createTelegramRouter(service: TelegramService) {
     response.json(await service.getProfile(getSessionId(request.headers.cookie)));
   }));
 
+  router.get('/chats', asyncHandler(async (request, response) => {
+    response.json(await service.getChats(getSessionId(request.headers.cookie)));
+  }));
+
   router.post('/updates', asyncHandler(async (request, response) => {
     const body = request.body as RequestBody;
     response.json(await service.getUpdates(getSessionId(request.headers.cookie)));

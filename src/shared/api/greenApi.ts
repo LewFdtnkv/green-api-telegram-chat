@@ -1,4 +1,4 @@
-import type { GreenApiInstance, TelegramMessage, TelegramUpdate } from '../../entities/telegram/model/types';
+import type { GreenApiInstance, TelegramChat, TelegramMessage, TelegramUpdate } from '../../entities/telegram/model/types';
 
 export class ApiError extends Error {
   constructor(public readonly status: number, message: string) {
@@ -28,6 +28,7 @@ async function request<T>(path: string, method: 'GET' | 'POST' = 'GET', payload?
 export const greenApi = {
   connect: (apiUrl: string, idInstance: string, apiTokenInstance: string) => request<GreenApiInstance>('/api/green-api/connect', 'POST', { apiUrl, idInstance, apiTokenInstance }),
   getSession: () => request<GreenApiInstance>('/api/green-api/session'),
+  getChats: () => request<TelegramChat[]>('/api/green-api/chats'),
   getUpdates: () => request<TelegramUpdate[]>('/api/green-api/updates', 'POST'),
   sendMessage: (chatId: string | number, text: string) => request<TelegramMessage>('/api/green-api/send', 'POST', { chatId, text }),
   disconnect: () => request<null>('/api/green-api/disconnect', 'POST')

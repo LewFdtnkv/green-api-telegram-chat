@@ -1,5 +1,5 @@
 import { HttpError } from '../../../shared/errors/HttpError.js';
-import type { GreenApiCredentials, GreenApiInstance, SendTextMessageCommand, TelegramGateway, TelegramMessage, TelegramUpdate } from '../domain/types.js';
+import type { GreenApiCredentials, GreenApiInstance, SendTextMessageCommand, TelegramChat, TelegramGateway, TelegramMessage, TelegramUpdate } from '../domain/types.js';
 
 type GreenApiError = {
   message?: string;
@@ -38,6 +38,13 @@ type GreenApiNotification = {
 
 type GreenApiSendResult = {
   idMessage?: string;
+};
+
+type GreenApiChat = {
+  chatId?: string;
+  name?: string;
+  type?: string;
+  username?: string;
 };
 
 type FetchClient = typeof fetch;
@@ -102,6 +109,18 @@ export function createTelegramHttpGateway(fetchClient: FetchClient = fetch): Tel
         typeInstance: settings.typeInstance
       } satisfies GreenApiInstance;
     },
+    async getChats(credentials) {
+      const chats = await request<GreenApiChat[]>(credentials, 'getChats');
+      return chats.flatMap((chat): TelegramChat[] => {
+        if (!chat.chatId) return [];
+        return [{
+          id: chat.chatId,
+          title: chat.name,
+          type: chat.type,
+          username: chat.username || undefined
+        }];
+      });
+    },
     async getUpdates(credentials) {
       const updates: TelegramUpdate[] = [];
 
@@ -122,7 +141,7 @@ export function createTelegramHttpGateway(fetchClient: FetchClient = fetch): Tel
             date: body.timestamp || Math.floor(Date.now() / 1000),
             chat: {
               id: chatId,
-              title: body.senderData?.senderContactName || body.senderData?.senderName || body.senderData?.chatName
+              title: body.senderData?.senderContactName || body.senderData?.chatName || body.senderData?.senderName
             },
             text
           };

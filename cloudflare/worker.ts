@@ -39,6 +39,10 @@ export default {
         return json(await service.getProfile(getSessionId(request)));
       }
 
+      if (url.pathname === '/api/green-api/chats' && request.method === 'GET') {
+        return json(await service.getChats(getSessionId(request)));
+      }
+
       if (url.pathname === '/api/green-api/updates' && request.method === 'POST') {
         return json(await service.getUpdates(getSessionId(request)));
       }

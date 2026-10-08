@@ -8,6 +8,7 @@ import { createInMemoryTelegramSessionStore } from '../infrastructure/inMemoryTe
 function createGateway(): TelegramGateway {
   return {
     getProfile: async (credentials) => ({ idInstance: credentials.idInstance, stateInstance: 'authorized', typeInstance: 'telegram' }),
+    getChats: async () => [],
     getUpdates: async () => [],
     sendTextMessage: async (_credentials, command) => ({ message_id: '1', date: 0, chat: { id: command.chatId }, text: command.text })
   };

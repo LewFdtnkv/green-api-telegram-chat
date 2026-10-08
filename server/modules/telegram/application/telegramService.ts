@@ -62,6 +62,10 @@ export function createTelegramService(gateway: TelegramGateway, sessions: Telegr
       return sessions.create(credentials, profile);
     },
     getProfile: async (sessionId: unknown) => (await getSession(sessionId)).profile,
+    getChats: async (sessionId: unknown) => {
+      const session = await getSession(sessionId);
+      return gateway.getChats(session.credentials);
+    },
     getUpdates: async (sessionId: unknown) => {
       const session = await getSession(sessionId);
       return gateway.getUpdates(session.credentials);

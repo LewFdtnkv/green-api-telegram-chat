@@ -56,3 +56,23 @@ test('treats an empty GREEN-API queue response as no updates', async () => {
 
   assert.deepEqual(updates, []);
 });
+
+test('maps the full GREEN-API chat list', async () => {
+  const gateway = createTelegramHttpGateway(async (input) => {
+    const url = String(input);
+    if (url.includes('getChats')) {
+      return Response.json([
+        { chatId: '-1001', name: 'Рабочая группа', type: 'supergroup', username: '@work' },
+        { chatId: '42', name: 'Тестовый пользователь', type: 'user' }
+      ]);
+    }
+    throw new Error(`Unexpected request: ${url}`);
+  });
+
+  const chats = await gateway.getChats(credentials);
+
+  assert.deepEqual(chats, [
+    { id: '-1001', title: 'Рабочая группа', type: 'supergroup', username: '@work' },
+    { id: '42', title: 'Тестовый пользователь', type: 'user', username: undefined }
+  ]);
+});

@@ -41,6 +41,7 @@ export type SendTextMessageCommand = {
 
 export interface TelegramGateway {
   getProfile(credentials: GreenApiCredentials): Promise<GreenApiInstance>;
+  getChats(credentials: GreenApiCredentials): Promise<TelegramChat[]>;
   getUpdates(credentials: GreenApiCredentials): Promise<TelegramUpdate[]>;
   sendTextMessage(credentials: GreenApiCredentials, command: SendTextMessageCommand): Promise<TelegramMessage>;
 }

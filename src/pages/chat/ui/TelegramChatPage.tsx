@@ -2,9 +2,9 @@ import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { ApiError, greenApi } from '../../../shared/api/greenApi';
 import { chatSession } from '../../../shared/lib/chatSession';
-import { telegramQueryKeys, useTelegramSession, useTelegramUpdates } from '../../../entities/telegram/api/telegramQueries';
+import { telegramQueryKeys, useTelegramChats, useTelegramSession, useTelegramUpdates } from '../../../entities/telegram/api/telegramQueries';
 import type { ChatId, ChatSummary, MessagesByChat, TelegramMessage } from '../../../entities/telegram/model/types';
-import { createManualChat, upsertChat } from '../../../entities/chat/lib/chat';
+import { createManualChat, mergeChatList, upsertChat } from '../../../entities/chat/lib/chat';
 import { appendMessage } from '../../../entities/message/lib/message';
 import { BotConnectDialog } from '../../../features/connect-bot/ui/BotConnectDialog';
 import { AddChatDialog } from '../../../features/add-chat/ui/AddChatDialog';
@@ -31,6 +31,7 @@ export function TelegramChatPage() {
   const queryClient = useQueryClient();
   const sessionQuery = useTelegramSession(isSessionAvailable);
   const profile = isSessionAvailable ? sessionQuery.data ?? null : null;
+  const chatsQuery = useTelegramChats(Boolean(profile));
   const updatesQuery = useTelegramUpdates(Boolean(profile));
 
   const selectedChat = chats.find((chat) => String(chat.id) === String(selectedChatId)) || null;
@@ -46,6 +47,7 @@ export function TelegramChatPage() {
 
   const expireSession = useCallback(() => {
     setIsSessionAvailable(false);
+    queryClient.removeQueries({ queryKey: telegramQueryKeys.chats });
     queryClient.removeQueries({ queryKey: telegramQueryKeys.updates });
     setShowSettings(true);
   }, [queryClient]);
@@ -54,6 +56,7 @@ export function TelegramChatPage() {
     mutationFn: ({ apiUrl, idInstance, apiTokenInstance }: { apiUrl: string; idInstance: string; apiTokenInstance: string }) => greenApi.connect(apiUrl, idInstance, apiTokenInstance),
     onSuccess: (instance) => {
       queryClient.setQueryData(telegramQueryKeys.session, instance);
+      queryClient.removeQueries({ queryKey: telegramQueryKeys.chats });
       queryClient.removeQueries({ queryKey: telegramQueryKeys.updates });
       chatSession.clear();
       setIsSessionAvailable(true);
@@ -100,6 +103,11 @@ export function TelegramChatPage() {
   }, [expireSession, sessionQuery.error]);
 
   useEffect(() => {
+    if (!chatsQuery.data) return;
+    setChats((current) => mergeChatList(current, chatsQuery.data));
+  }, [chatsQuery.data]);
+
+  useEffect(() => {
     if (!updatesQuery.data?.length) return;
     updatesQuery.data.forEach((update) => {
       if (update.message?.text) mergeMessage(update.message, 'incoming');
@@ -130,7 +138,7 @@ export function TelegramChatPage() {
       return;
     }
     setIsRefreshing(true);
-    await updatesQuery.refetch();
+    await Promise.all([updatesQuery.refetch(), chatsQuery.refetch()]);
     setIsRefreshing(false);
   }
 
@@ -165,6 +173,7 @@ export function TelegramChatPage() {
   function disconnect() {
     disconnectMutation.mutate();
     queryClient.removeQueries({ queryKey: telegramQueryKeys.session });
+    queryClient.removeQueries({ queryKey: telegramQueryKeys.chats });
     queryClient.removeQueries({ queryKey: telegramQueryKeys.updates });
     chatSession.clear();
     setIsSessionAvailable(false);
