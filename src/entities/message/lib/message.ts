@@ -14,5 +14,6 @@ export function appendMessage(messagesByChat: MessagesByChat, message: TelegramM
   const key = String(message.chat.id);
   const current = messagesByChat[key] || [];
   if (current.some((item) => item.message_id === message.message_id)) return messagesByChat;
-  return { ...messagesByChat, [key]: [...current, { ...message, direction }] };
+  const next = [...current, { ...message, direction }].sort((left, right) => left.date - right.date);
+  return { ...messagesByChat, [key]: next };
 }

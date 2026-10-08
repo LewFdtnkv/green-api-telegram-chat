@@ -10,22 +10,23 @@ const credentials = {
 
 test('turns an incoming GREEN-API notification into a chat message and acknowledges it', async () => {
   const requests: Array<{ url: string; method: string }> = [];
+  const notifications = [{
+    receiptId: 25,
+    body: {
+      typeWebhook: 'incomingMessageReceived',
+      timestamp: 1_700_000_000,
+      idMessage: 'message-1',
+      senderData: { chatId: '42', senderName: 'Тестовый пользователь' },
+      messageData: { typeMessage: 'textMessage', textMessageData: { textMessage: 'Привет' } }
+    }
+  }, null];
   const gateway = createTelegramHttpGateway(async (input, init) => {
     const url = String(input);
     const method = init?.method || 'GET';
     requests.push({ url, method });
 
     if (url.includes('receiveNotification')) {
-      return Response.json({
-        receiptId: 25,
-        body: {
-          typeWebhook: 'incomingMessageReceived',
-          timestamp: 1_700_000_000,
-          idMessage: 'message-1',
-          senderData: { chatId: '42', senderName: 'Тестовый пользователь' },
-          messageData: { typeMessage: 'textMessage', textMessageData: { textMessage: 'Привет' } }
-        }
-      });
+      return Response.json(notifications.shift());
     }
     if (url.includes(`deleteNotification/${credentials.apiTokenInstance}/25`)) return Response.json({ result: true });
     throw new Error(`Unexpected request: ${url}`);
@@ -42,7 +43,7 @@ test('turns an incoming GREEN-API notification into a chat message and acknowled
       text: 'Привет'
     }
   }]);
-  assert.equal(requests.length, 2);
+  assert.equal(requests.length, 3);
   assert.equal(requests[0]?.method, 'GET');
   assert.equal(requests[1]?.method, 'DELETE');
   assert.match(requests[1]?.url || '', new RegExp(`deleteNotification/${credentials.apiTokenInstance}/25$`));

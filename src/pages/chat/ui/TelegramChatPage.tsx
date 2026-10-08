@@ -34,7 +34,10 @@ export function TelegramChatPage() {
   const updatesQuery = useTelegramUpdates(Boolean(profile));
 
   const selectedChat = chats.find((chat) => String(chat.id) === String(selectedChatId)) || null;
-  const activeMessages = useMemo(() => messages[String(selectedChatId)] || [], [messages, selectedChatId]);
+  const activeMessages = useMemo(
+    () => [...(messages[String(selectedChatId)] || [])].sort((left, right) => left.date - right.date),
+    [messages, selectedChatId]
+  );
 
   const mergeMessage = useCallback((message: TelegramMessage, direction: 'incoming' | 'outgoing') => {
     setChats((current) => upsertChat(current, message, direction));

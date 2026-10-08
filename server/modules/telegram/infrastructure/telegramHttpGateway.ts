@@ -42,6 +42,8 @@ type GreenApiSendResult = {
 
 type FetchClient = typeof fetch;
 
+const MAX_NOTIFICATIONS_PER_POLL = 20;
+
 export function createTelegramHttpGateway(fetchClient: FetchClient = fetch): TelegramGateway {
   async function request<T>(credentials: GreenApiCredentials, method: string, init: RequestInit = {}, includeToken = true): Promise<T> {
     let response: Response;
@@ -101,30 +103,36 @@ export function createTelegramHttpGateway(fetchClient: FetchClient = fetch): Tel
       } satisfies GreenApiInstance;
     },
     async getUpdates(credentials) {
-      const notification = await receiveNotification(credentials);
-      if (!notification || notification.receiptId === undefined) return [];
+      const updates: TelegramUpdate[] = [];
 
-      try {
-        const body = notification.body;
-        const text = body?.messageData?.textMessageData?.textMessage;
-        const chatId = body?.senderData?.chatId;
-        if (body?.typeWebhook !== 'incomingMessageReceived' || body.messageData?.typeMessage !== 'textMessage' || !text || !chatId) {
-          return [];
+      for (let index = 0; index < MAX_NOTIFICATIONS_PER_POLL; index += 1) {
+        const notification = await receiveNotification(credentials);
+        if (!notification || notification.receiptId === undefined) break;
+
+        try {
+          const body = notification.body;
+          const text = body?.messageData?.textMessageData?.textMessage;
+          const chatId = body?.senderData?.chatId;
+          if (body?.typeWebhook !== 'incomingMessageReceived' || body.messageData?.typeMessage !== 'textMessage' || !text || !chatId) {
+            continue;
+          }
+
+          const message: TelegramMessage = {
+            message_id: body.idMessage || String(notification.receiptId),
+            date: body.timestamp || Math.floor(Date.now() / 1000),
+            chat: {
+              id: chatId,
+              title: body.senderData?.senderContactName || body.senderData?.senderName || body.senderData?.chatName
+            },
+            text
+          };
+          updates.push({ update_id: String(notification.receiptId), message });
+        } finally {
+          await deleteNotification(credentials, notification.receiptId);
         }
-
-        const message: TelegramMessage = {
-          message_id: body.idMessage || String(notification.receiptId),
-          date: body.timestamp || Math.floor(Date.now() / 1000),
-          chat: {
-            id: chatId,
-            title: body.senderData?.senderContactName || body.senderData?.senderName || body.senderData?.chatName
-          },
-          text
-        };
-        return [{ update_id: String(notification.receiptId), message }] satisfies TelegramUpdate[];
-      } finally {
-        await deleteNotification(credentials, notification.receiptId);
       }
+
+      return updates;
     },
     async sendTextMessage(credentials, command: SendTextMessageCommand) {
       const result = await request<GreenApiSendResult>(credentials, 'sendMessage', {
