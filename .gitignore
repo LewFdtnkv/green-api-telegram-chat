@@ -7,3 +7,6 @@ build-server/
 .env.*
 !.env.example
 npm-debug.log*
+
+# Original screenshots may contain personal Telegram data. Public copies live in docs/screenshots.
+src/shared/images/png/

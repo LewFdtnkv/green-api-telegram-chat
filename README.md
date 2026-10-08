@@ -4,6 +4,16 @@
 
 **Демо:** https://telegram-inbox.telegram-chat-console.workers.dev
 
+## Скриншоты
+
+### Подключение бота
+
+![Экран подключения Telegram-бота](docs/screenshots/connect-bot.png)
+
+### Переписка
+
+![Экран активного чата](docs/screenshots/chat-view.png)
+
 ## Возможности
 
 - Подключение по токену Telegram-бота.
@@ -78,4 +88,4 @@ docker compose up --build
 2. Выполните `npx wrangler login` и подтвердите доступ в браузере.
 3. Выполните `npm run deploy:cloudflare`.
 
-После публикации Wrangler выведет постоянный адрес вида `https://telegram-inbox.<account>.workers.dev`.
+После публикации Wrangler выведет постоянный адрес вида `https://telegram-inbox.telegram-chat-console.workers.dev/`.
