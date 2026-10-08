@@ -46,3 +46,11 @@ test('turns an incoming GREEN-API notification into a chat message and acknowled
   assert.equal(requests[0]?.method, 'GET');
   assert.equal(requests[1]?.method, 'DELETE');
 });
+
+test('treats an empty GREEN-API queue response as no updates', async () => {
+  const gateway = createTelegramHttpGateway(async () => Response.json(null));
+
+  const updates = await gateway.getUpdates(credentials);
+
+  assert.deepEqual(updates, []);
+});

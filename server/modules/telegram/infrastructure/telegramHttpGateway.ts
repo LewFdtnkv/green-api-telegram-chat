@@ -51,10 +51,13 @@ export function createTelegramHttpGateway(fetchClient: FetchClient = fetch): Tel
       throw new HttpError(502, 'Не удалось связаться с GREEN-API.');
     }
 
-    const data = await response.json().catch(() => ({})) as T & GreenApiError;
+    const data = await response.json().catch(() => null) as (T & GreenApiError) | null;
     if (!response.ok) {
-      const message = data.message || data.description || 'GREEN-API вернул ошибку.';
+      const message = data?.message || data?.description || 'GREEN-API вернул ошибку.';
       throw new HttpError(response.status >= 400 && response.status < 500 ? 400 : 502, message);
+    }
+    if (data === null) {
+      throw new HttpError(502, 'GREEN-API вернул пустой ответ.');
     }
     return data;
   }
@@ -68,11 +71,11 @@ export function createTelegramHttpGateway(fetchClient: FetchClient = fetch): Tel
     }
     if (response.status === 204) return null;
 
-    const data = await response.json().catch(() => ({})) as GreenApiNotification & GreenApiError;
+    const data = await response.json().catch(() => null) as (GreenApiNotification & GreenApiError) | null;
     if (!response.ok) {
-      throw new HttpError(response.status >= 400 && response.status < 500 ? 400 : 502, data.message || data.description || 'GREEN-API вернул ошибку.');
+      throw new HttpError(response.status >= 400 && response.status < 500 ? 400 : 502, data?.message || data?.description || 'GREEN-API вернул ошибку.');
     }
-    return data.receiptId === undefined ? null : data;
+    return data?.receiptId === undefined ? null : data;
   }
 
   async function deleteNotification(credentials: GreenApiCredentials, receiptId: number | string): Promise<void> {

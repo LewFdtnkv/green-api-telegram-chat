@@ -20,7 +20,8 @@ export function useTelegramUpdates(enabled: boolean) {
     queryKey: telegramQueryKeys.updates,
     queryFn: greenApi.getUpdates,
     enabled,
-    refetchInterval: 6000,
+    retry: false,
+    refetchInterval: (query) => query.state.error ? false : 6000,
     refetchIntervalInBackground: false
   });
 }
