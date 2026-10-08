@@ -7,6 +7,7 @@ const SESSION_COOKIE = 'green_api_session';
 const MAX_BODY_SIZE = 32 * 1024;
 
 type RequestBody = {
+  apiUrl?: unknown;
   idInstance?: unknown;
   apiTokenInstance?: unknown;
   chatId?: unknown;
@@ -28,7 +29,7 @@ export default {
     try {
       if (url.pathname === '/api/green-api/connect' && request.method === 'POST') {
         const body = await readBody(request);
-        const session = await service.connect(body.idInstance, body.apiTokenInstance);
+        const session = await service.connect(body.apiUrl, body.idInstance, body.apiTokenInstance);
         return json(session.profile, {
           headers: { 'set-cookie': createSessionCookie(session.id, session.expiresAt) }
         });

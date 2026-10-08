@@ -1,8 +1,6 @@
 import { HttpError } from '../../../shared/errors/HttpError.js';
 import type { GreenApiCredentials, GreenApiInstance, SendTextMessageCommand, TelegramGateway, TelegramMessage, TelegramUpdate } from '../domain/types.js';
 
-const GREEN_API_URL = 'https://api.green-api.com';
-
 type GreenApiError = {
   message?: string;
   description?: string;
@@ -137,5 +135,5 @@ export function createTelegramHttpGateway(fetchClient: FetchClient = fetch): Tel
 }
 
 function createUrl(credentials: GreenApiCredentials, method: string): string {
-  return `${GREEN_API_URL}/waInstance${encodeURIComponent(credentials.idInstance)}/${method}/${encodeURIComponent(credentials.apiTokenInstance)}`;
+  return `${credentials.apiUrl}/waInstance${encodeURIComponent(credentials.idInstance)}/${method}/${encodeURIComponent(credentials.apiTokenInstance)}`;
 }

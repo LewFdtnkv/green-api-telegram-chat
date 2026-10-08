@@ -1,6 +1,7 @@
 export type TelegramChatId = string | number;
 
 export type GreenApiCredentials = {
+  apiUrl: string;
   idInstance: string;
   apiTokenInstance: string;
 };

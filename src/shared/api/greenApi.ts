@@ -26,7 +26,7 @@ async function request<T>(path: string, method: 'GET' | 'POST' = 'GET', payload?
 }
 
 export const greenApi = {
-  connect: (idInstance: string, apiTokenInstance: string) => request<GreenApiInstance>('/api/green-api/connect', 'POST', { idInstance, apiTokenInstance }),
+  connect: (apiUrl: string, idInstance: string, apiTokenInstance: string) => request<GreenApiInstance>('/api/green-api/connect', 'POST', { apiUrl, idInstance, apiTokenInstance }),
   getSession: () => request<GreenApiInstance>('/api/green-api/session'),
   getUpdates: () => request<TelegramUpdate[]>('/api/green-api/updates', 'POST'),
   sendMessage: (chatId: string | number, text: string) => request<TelegramMessage>('/api/green-api/send', 'POST', { chatId, text }),

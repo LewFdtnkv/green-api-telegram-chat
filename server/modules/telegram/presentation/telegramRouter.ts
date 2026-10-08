@@ -5,6 +5,7 @@ import type { TelegramService } from '../application/telegramService.js';
 const SESSION_COOKIE = 'green_api_session';
 
 type RequestBody = {
+  apiUrl?: unknown;
   idInstance?: unknown;
   apiTokenInstance?: unknown;
   chatId?: unknown;
@@ -16,7 +17,7 @@ export function createTelegramRouter(service: TelegramService) {
 
   router.post('/connect', asyncHandler(async (request, response) => {
     const body = request.body as RequestBody;
-    const session = await service.connect(body.idInstance, body.apiTokenInstance);
+    const session = await service.connect(body.apiUrl, body.idInstance, body.apiTokenInstance);
     response.cookie(SESSION_COOKIE, session.id, {
       httpOnly: true,
       sameSite: 'lax',

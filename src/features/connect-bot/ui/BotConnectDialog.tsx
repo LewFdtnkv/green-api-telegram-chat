@@ -20,11 +20,13 @@ export function BotConnectDialog({ profile, onConnect, onClose, onDisconnect, is
         </div>
         {profile && <div className="connected-bot"><span className="avatar">G</span><span><strong>Инстанс {profile.idInstance}</strong><small>{profile.wid || profile.typeInstance || 'Telegram API'}</small></span><Check size={19} /></div>}
         <form onSubmit={onConnect}>
+          <label htmlFor="api-url">apiUrl</label>
+          <input id="api-url" name="apiUrl" type="url" placeholder="https://4100.api.green-api.com" autoComplete="off" required />
           <label htmlFor="id-instance">idInstance</label>
-          <input id="id-instance" name="idInstance" inputMode="numeric" placeholder="1100000000" autoComplete="off" autoFocus />
+          <input id="id-instance" name="idInstance" inputMode="numeric" placeholder="1100000000" autoComplete="off" autoFocus required />
           <label htmlFor="api-token-instance">apiTokenInstance</label>
-          <input id="api-token-instance" name="apiTokenInstance" type="password" placeholder="Ключ доступа инстанса" autoComplete="off" />
-          <p className="field-hint">Возьмите оба значения в личном кабинете GREEN-API. Они не сохраняются в браузере.</p>
+          <input id="api-token-instance" name="apiTokenInstance" type="password" placeholder="Ключ доступа инстанса" autoComplete="off" required />
+          <p className="field-hint">Скопируйте три значения из личного кабинета GREEN-API. Они не сохраняются в браузере.</p>
           <button className="primary-button full" type="submit" disabled={isConnecting}>{isConnecting ? <><LoaderCircle className="spin" size={18} /> Проверяем</> : <><KeyRound size={18} /> Подключить инстанс</>}</button>
         </form>
         {profile && <button className="danger-link" type="button" onClick={onDisconnect}><LogOut size={17} /> Отключить инстанс</button>}

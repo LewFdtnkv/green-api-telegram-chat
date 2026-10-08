@@ -15,12 +15,17 @@ function createGateway(): TelegramGateway {
 
 test('rejects malformed GREEN-API credentials before invoking the gateway', () => {
   const service = createTelegramService(createGateway(), createInMemoryTelegramSessionStore());
-  return assert.rejects(() => service.connect('not-an-id', 'short'), (error: unknown) => error instanceof HttpError && error.statusCode === 400);
+  return assert.rejects(() => service.connect('https://not-green-api.example', 'not-an-id', 'short'), (error: unknown) => error instanceof HttpError && error.statusCode === 400);
+});
+
+test('rejects an apiUrl outside GREEN-API', () => {
+  const service = createTelegramService(createGateway(), createInMemoryTelegramSessionStore());
+  return assert.rejects(() => service.connect('https://example.com', '1100000000', 'ABCDEFGHIJKLMNOPQRSTUVWX'), (error: unknown) => error instanceof HttpError && error.statusCode === 400);
 });
 
 test('trims text before sending it through the gateway', async () => {
   const service = createTelegramService(createGateway(), createInMemoryTelegramSessionStore());
-  const session = await service.connect('1100000000', 'ABCDEFGHIJKLMNOPQRSTUVWX');
+  const session = await service.connect('https://4100.api.green-api.com', '1100000000', 'ABCDEFGHIJKLMNOPQRSTUVWX');
   const result = await service.sendTextMessage(session.id, 42, '  Привет  ');
   assert.equal(result.text, 'Привет');
   assert.equal(result.chat.id, 42);
@@ -28,7 +33,7 @@ test('trims text before sending it through the gateway', async () => {
 
 test('rejects blank message text', async () => {
   const service = createTelegramService(createGateway(), createInMemoryTelegramSessionStore());
-  const session = await service.connect('1100000000', 'ABCDEFGHIJKLMNOPQRSTUVWX');
+  const session = await service.connect('https://4100.api.green-api.com', '1100000000', 'ABCDEFGHIJKLMNOPQRSTUVWX');
   await assert.rejects(() => service.sendTextMessage(session.id, 42, '   '), (error: unknown) => error instanceof HttpError && error.statusCode === 400);
 });
 
@@ -40,5 +45,5 @@ test('rejects requests without a GREEN-API session', async () => {
 test('rejects an instance that is not authorized', async () => {
   const gateway: TelegramGateway = { ...createGateway(), getProfile: async (credentials) => ({ idInstance: credentials.idInstance, stateInstance: 'notAuthorized' }) };
   const service = createTelegramService(gateway, createInMemoryTelegramSessionStore());
-  await assert.rejects(() => service.connect('1100000000', 'ABCDEFGHIJKLMNOPQRSTUVWX'), (error: unknown) => error instanceof HttpError && error.statusCode === 400);
+  await assert.rejects(() => service.connect('https://4100.api.green-api.com', '1100000000', 'ABCDEFGHIJKLMNOPQRSTUVWX'), (error: unknown) => error instanceof HttpError && error.statusCode === 400);
 });

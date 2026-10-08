@@ -8,14 +8,28 @@ const MAX_MESSAGE_LENGTH = 4096;
 export type TelegramService = ReturnType<typeof createTelegramService>;
 
 export function createTelegramService(gateway: TelegramGateway, sessions: TelegramSessionStore) {
-  function getCredentials(idInstance: unknown, apiTokenInstance: unknown): GreenApiCredentials {
+  function getCredentials(apiUrl: unknown, idInstance: unknown, apiTokenInstance: unknown): GreenApiCredentials {
+    if (typeof apiUrl !== 'string') {
+      throw new HttpError(400, 'Введите корректный apiUrl.');
+    }
+    let normalizedApiUrl: string;
+    try {
+      const url = new URL(apiUrl.trim());
+      const isGreenApiHost = url.hostname === 'api.green-api.com' || url.hostname.endsWith('.api.green-api.com');
+      if (url.protocol !== 'https:' || !isGreenApiHost || url.username || url.password || url.pathname !== '/' || url.search || url.hash) {
+        throw new Error('Invalid API URL');
+      }
+      normalizedApiUrl = url.origin;
+    } catch {
+      throw new HttpError(400, 'Введите корректный apiUrl GREEN-API.');
+    }
     if (typeof idInstance !== 'string' || !INSTANCE_ID_PATTERN.test(idInstance.trim())) {
       throw new HttpError(400, 'Введите корректный idInstance.');
     }
     if (typeof apiTokenInstance !== 'string' || !INSTANCE_TOKEN_PATTERN.test(apiTokenInstance.trim())) {
       throw new HttpError(400, 'Введите корректный apiTokenInstance.');
     }
-    return { idInstance: idInstance.trim(), apiTokenInstance: apiTokenInstance.trim() };
+    return { apiUrl: normalizedApiUrl, idInstance: idInstance.trim(), apiTokenInstance: apiTokenInstance.trim() };
   }
 
   function getValidCommand(chatId: unknown, text: unknown): SendTextMessageCommand {
@@ -39,8 +53,8 @@ export function createTelegramService(gateway: TelegramGateway, sessions: Telegr
   }
 
   return {
-    connect: async (idInstance: unknown, apiTokenInstance: unknown) => {
-      const credentials = getCredentials(idInstance, apiTokenInstance);
+    connect: async (apiUrl: unknown, idInstance: unknown, apiTokenInstance: unknown) => {
+      const credentials = getCredentials(apiUrl, idInstance, apiTokenInstance);
       const profile = await gateway.getProfile(credentials);
       if (profile.stateInstance !== 'authorized') {
         throw new HttpError(400, `Инстанс не авторизован: ${profile.stateInstance}. Авторизуйте Telegram-инстанс в личном кабинете GREEN-API.`);

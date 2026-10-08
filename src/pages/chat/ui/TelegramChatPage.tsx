@@ -48,7 +48,7 @@ export function TelegramChatPage() {
   }, [queryClient]);
 
   const connectMutation = useMutation({
-    mutationFn: ({ idInstance, apiTokenInstance }: { idInstance: string; apiTokenInstance: string }) => greenApi.connect(idInstance, apiTokenInstance),
+    mutationFn: ({ apiUrl, idInstance, apiTokenInstance }: { apiUrl: string; idInstance: string; apiTokenInstance: string }) => greenApi.connect(apiUrl, idInstance, apiTokenInstance),
     onSuccess: (instance) => {
       queryClient.setQueryData(telegramQueryKeys.session, instance);
       queryClient.removeQueries({ queryKey: telegramQueryKeys.updates });
@@ -134,11 +134,12 @@ export function TelegramChatPage() {
   function connect(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const formData = new FormData(event.currentTarget);
+    const apiUrl = formData.get('apiUrl');
     const idInstance = formData.get('idInstance');
     const apiTokenInstance = formData.get('apiTokenInstance');
-    if (typeof idInstance !== 'string' || typeof apiTokenInstance !== 'string' || !idInstance.trim() || !apiTokenInstance.trim()) return;
+    if (typeof apiUrl !== 'string' || typeof idInstance !== 'string' || typeof apiTokenInstance !== 'string' || !apiUrl.trim() || !idInstance.trim() || !apiTokenInstance.trim()) return;
     setError('');
-    connectMutation.mutate({ idInstance: idInstance.trim(), apiTokenInstance: apiTokenInstance.trim() });
+    connectMutation.mutate({ apiUrl: apiUrl.trim(), idInstance: idInstance.trim(), apiTokenInstance: apiTokenInstance.trim() });
   }
 
   function addChat(event: FormEvent<HTMLFormElement>) {

@@ -3,6 +3,7 @@ import test from 'node:test';
 import { createTelegramHttpGateway } from './telegramHttpGateway.js';
 
 const credentials = {
+  apiUrl: 'https://4100.api.green-api.com',
   idInstance: '1100000000',
   apiTokenInstance: 'ABCDEFGHIJKLMNOPQRSTUVWX'
 };

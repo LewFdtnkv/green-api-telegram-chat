@@ -16,7 +16,7 @@ React + TypeScript интерфейс для отправки и получен�
 
 ## Возможности
 
-- Подключение по `idInstance` и `apiTokenInstance` GREEN-API.
+- Подключение по `apiUrl`, `idInstance` и `apiTokenInstance` GREEN-API.
 - Проверка авторизации Telegram-инстанса через `getStateInstance`.
 - Получение текстовых сообщений через `receiveNotification` и подтверждение `deleteNotification`.
 - TanStack Query для кэша API, polling и мутаций.
@@ -34,7 +34,7 @@ React + TypeScript интерфейс для отправки и получен�
 ## Как протестировать
 
 1. Создайте Telegram-инстанс в личном кабинете GREEN-API и авторизуйте его.
-2. Введите `idInstance` и `apiTokenInstance` в настройках приложения.
+2. Введите `apiUrl`, `idInstance` и `apiTokenInstance` из карточки инстанса в настройках приложения.
 3. Убедитесь, что для инстанса включены входящие уведомления и не задан `webhookUrl`.
 4. Отправьте текстовое сообщение в Telegram и нажмите кнопку обновления. Чат появится в боковой панели.
 5. Выберите чат и отправьте ответ.
