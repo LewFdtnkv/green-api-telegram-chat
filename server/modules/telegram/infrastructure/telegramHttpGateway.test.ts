@@ -27,7 +27,7 @@ test('turns an incoming GREEN-API notification into a chat message and acknowled
         }
       });
     }
-    if (url.includes('deleteNotification/25')) return Response.json({ result: true });
+    if (url.includes(`deleteNotification/${credentials.apiTokenInstance}/25`)) return Response.json({ result: true });
     throw new Error(`Unexpected request: ${url}`);
   });
 
@@ -45,6 +45,7 @@ test('turns an incoming GREEN-API notification into a chat message and acknowled
   assert.equal(requests.length, 2);
   assert.equal(requests[0]?.method, 'GET');
   assert.equal(requests[1]?.method, 'DELETE');
+  assert.match(requests[1]?.url || '', new RegExp(`deleteNotification/${credentials.apiTokenInstance}/25$`));
 });
 
 test('treats an empty GREEN-API queue response as no updates', async () => {

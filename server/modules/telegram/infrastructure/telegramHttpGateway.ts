@@ -43,10 +43,10 @@ type GreenApiSendResult = {
 type FetchClient = typeof fetch;
 
 export function createTelegramHttpGateway(fetchClient: FetchClient = fetch): TelegramGateway {
-  async function request<T>(credentials: GreenApiCredentials, method: string, init: RequestInit = {}): Promise<T> {
+  async function request<T>(credentials: GreenApiCredentials, method: string, init: RequestInit = {}, includeToken = true): Promise<T> {
     let response: Response;
     try {
-      response = await fetchClient(createUrl(credentials, method), init);
+      response = await fetchClient(createUrl(credentials, method, includeToken), init);
     } catch {
       throw new HttpError(502, 'Не удалось связаться с GREEN-API.');
     }
@@ -79,7 +79,12 @@ export function createTelegramHttpGateway(fetchClient: FetchClient = fetch): Tel
   }
 
   async function deleteNotification(credentials: GreenApiCredentials, receiptId: number | string): Promise<void> {
-    await request(credentials, `deleteNotification/${encodeURIComponent(String(receiptId))}`, { method: 'DELETE' });
+    await request(
+      credentials,
+      `deleteNotification/${encodeURIComponent(credentials.apiTokenInstance)}/${encodeURIComponent(String(receiptId))}`,
+      { method: 'DELETE' },
+      false
+    );
   }
 
   return {
@@ -137,6 +142,7 @@ export function createTelegramHttpGateway(fetchClient: FetchClient = fetch): Tel
   };
 }
 
-function createUrl(credentials: GreenApiCredentials, method: string): string {
-  return `${credentials.apiUrl}/waInstance${encodeURIComponent(credentials.idInstance)}/${method}/${encodeURIComponent(credentials.apiTokenInstance)}`;
+function createUrl(credentials: GreenApiCredentials, method: string, includeToken = true): string {
+  const endpoint = `${credentials.apiUrl}/waInstance${encodeURIComponent(credentials.idInstance)}/${method}`;
+  return includeToken ? `${endpoint}/${encodeURIComponent(credentials.apiTokenInstance)}` : endpoint;
 }
