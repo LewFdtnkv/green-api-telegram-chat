@@ -1,6 +1,8 @@
 import { useQuery } from '@tanstack/react-query';
 import { greenApi } from '../../../shared/api/greenApi';
 
+const UPDATE_POLL_INTERVAL_MS = 1_000;
+
 export const telegramQueryKeys = {
   session: ['telegram', 'session'] as const,
   updates: ['telegram', 'updates'] as const
@@ -21,7 +23,7 @@ export function useTelegramUpdates(enabled: boolean) {
     queryFn: greenApi.getUpdates,
     enabled,
     retry: false,
-    refetchInterval: (query) => query.state.error ? false : 6000,
+    refetchInterval: (query) => query.state.error ? false : UPDATE_POLL_INTERVAL_MS,
     refetchIntervalInBackground: false
   });
 }
