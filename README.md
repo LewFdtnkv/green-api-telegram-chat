@@ -2,6 +2,8 @@
 
 Минимальный React + TypeScript интерфейс для отправки и получения текстовых сообщений через Telegram Bot API.
 
+**Демо:** https://telegram-inbox.telegram-chat-console.workers.dev
+
 ## Возможности
 
 - Подключение по токену Telegram-бота.
