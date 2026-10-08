@@ -19,6 +19,7 @@
 .message-area {
   display: flex;
   flex: 1;
+  min-height: 0;
   flex-direction: column;
   gap: 10px;
   padding: 26px clamp(18px, 5vw, 96px);
