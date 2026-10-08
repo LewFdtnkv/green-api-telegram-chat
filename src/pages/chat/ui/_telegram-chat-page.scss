@@ -7,6 +7,8 @@
   background: var(--color-soft);
 }
 
+.app-shell.sidebar-collapsed { grid-template-columns: 76px minmax(0, 1fr); }
+
 .chat-panel {
   display: flex;
   min-width: 0;
@@ -86,6 +88,8 @@
   .app-shell {
     display: block;
   }
+
+  .app-shell.sidebar-collapsed { display: block; }
 
   .chat-panel {
     position: fixed;

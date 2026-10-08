@@ -1,4 +1,4 @@
-import { Bot, CircleHelp, LoaderCircle, MessageCircleMore, Plus, Settings2 } from 'lucide-react';
+import { Bot, CircleHelp, LoaderCircle, MessageCircleMore, PanelLeftClose, PanelLeftOpen, Plus, Settings2 } from 'lucide-react';
 import type { ChatId, ChatSummary, GreenApiInstance } from '../../../entities/telegram/model/types';
 import { getChatInitials, getChatTitle } from '../../../entities/chat/lib/chat';
 import { formatMessageTime, getMessagePreview } from '../../../entities/message/lib/message';
@@ -9,23 +9,28 @@ type ChatSidebarProps = {
   selectedChatId: ChatId | null;
   connectionStatus: 'disconnected' | 'connecting' | 'connected' | 'error';
   isRefreshing: boolean;
+  isCollapsed: boolean;
   onSelect: (chatId: ChatId) => void;
+  onToggleCollapse: () => void;
   onOpenSettings: () => void;
   onOpenNewChat: () => void;
   onRefresh: () => void;
 };
 
-export function ChatSidebar({ profile, chats, selectedChatId, connectionStatus, isRefreshing, onSelect, onOpenSettings, onOpenNewChat, onRefresh }: ChatSidebarProps) {
+export function ChatSidebar({ profile, chats, selectedChatId, connectionStatus, isRefreshing, isCollapsed, onSelect, onToggleCollapse, onOpenSettings, onOpenNewChat, onRefresh }: ChatSidebarProps) {
   const isConnected = connectionStatus === 'connected';
   return (
-    <aside className="sidebar">
+    <aside className={`sidebar ${isCollapsed ? 'is-collapsed' : ''}`}>
       <div className="brand-row">
         <div className="brand-mark"><MessageCircleMore size={22} /></div>
-        <div><strong>Telegram Inbox</strong><span>{profile ? `GREEN-API: ${profile.idInstance}` : 'GREEN-API'}</span></div>
-        <button className="icon-button quiet" type="button" title="Настройки GREEN-API" onClick={onOpenSettings}><Settings2 size={19} /></button>
+        <div className="brand-copy"><strong>Telegram Inbox</strong><span>{profile ? `GREEN-API: ${profile.idInstance}` : 'GREEN-API'}</span></div>
+        <button className="icon-button quiet settings-button" type="button" title="Настройки GREEN-API" onClick={onOpenSettings}><Settings2 size={19} /></button>
+        <button className="icon-button quiet collapse-button" type="button" title={isCollapsed ? 'Развернуть список чатов' : 'Свернуть список чатов'} aria-label={isCollapsed ? 'Развернуть список чатов' : 'Свернуть список чатов'} aria-pressed={isCollapsed} onClick={onToggleCollapse}>
+          {isCollapsed ? <PanelLeftOpen size={19} /> : <PanelLeftClose size={19} />}
+        </button>
       </div>
       <div className="sidebar-actions">
-        <button className="new-chat-button" type="button" onClick={onOpenNewChat} disabled={!isConnected}><Plus size={18} /> Новый чат</button>
+        <button className="new-chat-button" type="button" title="Новый чат" onClick={onOpenNewChat} disabled={!isConnected}><Plus size={18} /><span>Новый чат</span></button>
         <button className="icon-button outlined" type="button" title="Обновить сообщения" onClick={onRefresh} disabled={!isConnected || isRefreshing}><LoaderCircle className={isRefreshing ? 'spin' : ''} size={18} /></button>
       </div>
       <div className="chat-list" aria-label="Список чатов">
