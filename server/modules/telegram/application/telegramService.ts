@@ -1,25 +1,21 @@
 import { HttpError } from '../../../shared/errors/HttpError.js';
-import type { SendTextMessageCommand, TelegramGateway, TelegramSession, TelegramSessionStore, TelegramToken } from '../domain/types.js';
+import type { GreenApiCredentials, SendTextMessageCommand, TelegramGateway, TelegramSession, TelegramSessionStore } from '../domain/types.js';
 
-const TOKEN_PATTERN = /^\d{6,}:[A-Za-z0-9_-]{20,}$/;
+const INSTANCE_ID_PATTERN = /^\d{1,20}$/;
+const INSTANCE_TOKEN_PATTERN = /^[A-Za-z0-9_-]{20,}$/;
 const MAX_MESSAGE_LENGTH = 4096;
 
 export type TelegramService = ReturnType<typeof createTelegramService>;
 
 export function createTelegramService(gateway: TelegramGateway, sessions: TelegramSessionStore) {
-  function getValidToken(value: unknown): TelegramToken {
-    if (typeof value !== 'string' || !TOKEN_PATTERN.test(value.trim())) {
-      throw new HttpError(400, 'Введите корректный токен бота.');
+  function getCredentials(idInstance: unknown, apiTokenInstance: unknown): GreenApiCredentials {
+    if (typeof idInstance !== 'string' || !INSTANCE_ID_PATTERN.test(idInstance.trim())) {
+      throw new HttpError(400, 'Введите корректный idInstance.');
     }
-    return value.trim();
-  }
-
-  function getValidOffset(value: unknown): number | undefined {
-    if (value === undefined || value === null) return undefined;
-    if (!Number.isInteger(value) || (value as number) < 0) {
-      throw new HttpError(400, 'Параметр offset должен быть неотрицательным целым числом.');
+    if (typeof apiTokenInstance !== 'string' || !INSTANCE_TOKEN_PATTERN.test(apiTokenInstance.trim())) {
+      throw new HttpError(400, 'Введите корректный apiTokenInstance.');
     }
-    return value as number;
+    return { idInstance: idInstance.trim(), apiTokenInstance: apiTokenInstance.trim() };
   }
 
   function getValidCommand(chatId: unknown, text: unknown): SendTextMessageCommand {
@@ -36,26 +32,29 @@ export function createTelegramService(gateway: TelegramGateway, sessions: Telegr
   }
 
   async function getSession(sessionId: unknown): Promise<TelegramSession> {
-    if (typeof sessionId !== 'string') throw new HttpError(401, 'Сессия Telegram не найдена. Подключите бота заново.');
+    if (typeof sessionId !== 'string') throw new HttpError(401, 'Сессия GREEN-API не найдена. Подключите инстанс заново.');
     const session = await sessions.find(sessionId);
-    if (!session) throw new HttpError(401, 'Сессия Telegram истекла. Подключите бота заново.');
+    if (!session) throw new HttpError(401, 'Сессия GREEN-API истекла. Подключите инстанс заново.');
     return session;
   }
 
   return {
-    connect: async (token: unknown) => {
-      const validToken = getValidToken(token);
-      const profile = await gateway.getProfile(validToken);
-      return sessions.create(validToken, profile);
+    connect: async (idInstance: unknown, apiTokenInstance: unknown) => {
+      const credentials = getCredentials(idInstance, apiTokenInstance);
+      const profile = await gateway.getProfile(credentials);
+      if (profile.stateInstance !== 'authorized') {
+        throw new HttpError(400, `Инстанс не авторизован: ${profile.stateInstance}. Авторизуйте Telegram-инстанс в личном кабинете GREEN-API.`);
+      }
+      return sessions.create(credentials, profile);
     },
     getProfile: async (sessionId: unknown) => (await getSession(sessionId)).profile,
-    getUpdates: async (sessionId: unknown, offset: unknown) => {
+    getUpdates: async (sessionId: unknown) => {
       const session = await getSession(sessionId);
-      return gateway.getUpdates(session.token, getValidOffset(offset));
+      return gateway.getUpdates(session.credentials);
     },
     sendTextMessage: async (sessionId: unknown, chatId: unknown, text: unknown) => {
       const session = await getSession(sessionId);
-      return gateway.sendTextMessage(session.token, getValidCommand(chatId, text));
+      return gateway.sendTextMessage(session.credentials, getValidCommand(chatId, text));
     },
     disconnect: async (sessionId: unknown) => {
       if (typeof sessionId === 'string') await sessions.delete(sessionId);

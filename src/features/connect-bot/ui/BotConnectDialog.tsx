@@ -1,9 +1,9 @@
 import type { FormEventHandler } from 'react';
-import { ArrowLeft, Bot, Check, KeyRound, LoaderCircle, LogOut } from 'lucide-react';
-import type { TelegramBot } from '../../../entities/telegram/model/types';
+import { ArrowLeft, Check, KeyRound, LoaderCircle, LogOut } from 'lucide-react';
+import type { GreenApiInstance } from '../../../entities/telegram/model/types';
 
 type BotConnectDialogProps = {
-  profile: TelegramBot | null;
+  profile: GreenApiInstance | null;
   onConnect: FormEventHandler<HTMLFormElement>;
   onClose: () => void;
   onDisconnect: () => void;
@@ -16,16 +16,18 @@ export function BotConnectDialog({ profile, onConnect, onClose, onDisconnect, is
       <section className="modal" role="dialog" aria-modal="true" aria-labelledby="settings-title" onClick={(event) => event.stopPropagation()}>
         <div className="modal-heading">
           <div className="modal-icon"><KeyRound size={21} /></div>
-          <div><h2 id="settings-title">Подключение бота</h2><p>Токен используется только в текущей сессии.</p></div>
+          <div><h2 id="settings-title">Подключение GREEN-API</h2><p>Реквизиты используются только в текущей сессии.</p></div>
         </div>
-        {profile && <div className="connected-bot"><span className="avatar">{profile.first_name.slice(0, 1) || 'B'}</span><span><strong>{profile.first_name}</strong><small>@{profile.username}</small></span><Check size={19} /></div>}
+        {profile && <div className="connected-bot"><span className="avatar">G</span><span><strong>Инстанс {profile.idInstance}</strong><small>{profile.wid || profile.typeInstance || 'Telegram API'}</small></span><Check size={19} /></div>}
         <form onSubmit={onConnect}>
-          <label htmlFor="bot-token">Токен Telegram Bot API</label>
-          <input id="bot-token" name="token" type="password" placeholder="123456789:AA..." autoComplete="off" autoFocus />
-          <p className="field-hint">Создайте бота через @BotFather и вставьте его токен сюда.</p>
-          <button className="primary-button full" type="submit" disabled={isConnecting}>{isConnecting ? <><LoaderCircle className="spin" size={18} /> Проверяем</> : <><Bot size={18} /> Подключить</>}</button>
+          <label htmlFor="id-instance">idInstance</label>
+          <input id="id-instance" name="idInstance" inputMode="numeric" placeholder="1100000000" autoComplete="off" autoFocus />
+          <label htmlFor="api-token-instance">apiTokenInstance</label>
+          <input id="api-token-instance" name="apiTokenInstance" type="password" placeholder="Ключ доступа инстанса" autoComplete="off" />
+          <p className="field-hint">Возьмите оба значения в личном кабинете GREEN-API. Они не сохраняются в браузере.</p>
+          <button className="primary-button full" type="submit" disabled={isConnecting}>{isConnecting ? <><LoaderCircle className="spin" size={18} /> Проверяем</> : <><KeyRound size={18} /> Подключить инстанс</>}</button>
         </form>
-        {profile && <button className="danger-link" type="button" onClick={onDisconnect}><LogOut size={17} /> Отключить бота</button>}
+        {profile && <button className="danger-link" type="button" onClick={onDisconnect}><LogOut size={17} /> Отключить инстанс</button>}
         {profile && <button className="close-link" type="button" onClick={onClose}><ArrowLeft size={17} /> Вернуться к чату</button>}
       </section>
     </div>

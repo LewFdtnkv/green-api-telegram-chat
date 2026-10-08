@@ -1,6 +1,6 @@
-# Telegram Inbox
+# Telegram Inbox via GREEN-API
 
-Минимальный React + TypeScript интерфейс для отправки и получения текстовых сообщений через Telegram Bot API.
+React + TypeScript интерфейс для отправки и получения текстовых сообщений в Telegram через GREEN-API HTTP API.
 
 **Демо:** https://telegram-inbox.telegram-chat-console.workers.dev
 
@@ -16,9 +16,10 @@
 
 ## Возможности
 
-- Подключение по токену Telegram-бота.
-- Получение текстовых сообщений short polling-методом `getUpdates` каждые 3 секунды.
-- TanStack Query для кэша API, polling и мутаций Telegram.
+- Подключение по `idInstance` и `apiTokenInstance` GREEN-API.
+- Проверка авторизации Telegram-инстанса через `getStateInstance`.
+- Получение текстовых сообщений через `receiveNotification` и подтверждение `deleteNotification`.
+- TanStack Query для кэша API, polling и мутаций.
 - Список чатов, сформированный из входящих сообщений.
 - Отправка текста через `sendMessage`.
 - Ручное открытие чата по `chatId`.
@@ -32,14 +33,15 @@
 
 ## Как протестировать
 
-1. Создайте бота через `@BotFather` и вставьте токен в настройки приложения.
-2. Откройте диалог с ботом от имени получателя и отправьте `/start` или любое текстовое сообщение.
-3. Нажмите кнопку обновления. Чат появится в боковой панели.
-4. Выберите чат и отправьте ответ.
+1. Создайте Telegram-инстанс в личном кабинете GREEN-API и авторизуйте его.
+2. Введите `idInstance` и `apiTokenInstance` в настройках приложения.
+3. Убедитесь, что для инстанса включены входящие уведомления и не задан `webhookUrl`.
+4. Отправьте текстовое сообщение в Telegram и нажмите кнопку обновления. Чат появится в боковой панели.
+5. Выберите чат и отправьте ответ.
 
-Telegram-боты не могут первыми написать произвольному пользователю по номеру телефона. Получатель должен сначала начать диалог с ботом, после чего приложение получит его `chatId` через `getUpdates`.
+Приложение работает с текстовыми уведомлениями GREEN-API. Очередь уведомлений FIFO: каждое обработанное уведомление подтверждается методом `deleteNotification`.
 
-Токен передаётся только при подключении и хранится в памяти backend-а. Браузер использует `HttpOnly` session-cookie и не сохраняет токен в `sessionStorage`. Сессия действует до восьми часов и будет сброшена при перезапуске backend-контейнера.
+`apiTokenInstance` передаётся только при подключении и хранится в памяти backend-а. Браузер использует `HttpOnly` session-cookie и не сохраняет ключ в `sessionStorage`. Сессия действует до восьми часов и будет сброшена при перезапуске backend-контейнера.
 
 При обновлении вкладки сохраняются выбранный чат, полученные сообщения и курсор Telegram updates. Данные существуют только до закрытия вкладки.
 
@@ -60,10 +62,10 @@ Telegram-боты не могут первыми написать произво
 
 - `server/app` - композиция Express-приложения;
 - `server/config` - конфигурация запуска;
-- `server/modules/telegram/domain` - независимые от HTTP контракты Telegram;
-- `server/modules/telegram/application` - валидация и use cases;
-- `server/modules/telegram/infrastructure` - HTTP-шлюз к Telegram Bot API;
-- `server/modules/telegram/presentation` - Express-маршруты;
+- `server/modules/telegram/domain` - независимые от HTTP контракты мессенджера и GREEN-API;
+- `server/modules/telegram/application` - валидация реквизитов и use cases;
+- `server/modules/telegram/infrastructure` - HTTP-шлюз к GREEN-API;
+- `server/modules/telegram/presentation` - Express-маршруты `/api/green-api/*`;
 - `server/shared` - обработка ошибок и HTTP-утилиты.
 
 Проверки: `npm run typecheck`, `npm test`, `npm run build`.

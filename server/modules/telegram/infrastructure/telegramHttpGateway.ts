@@ -1,45 +1,141 @@
 import { HttpError } from '../../../shared/errors/HttpError.js';
-import type { SendTextMessageCommand, TelegramBot, TelegramGateway, TelegramMessage, TelegramToken, TelegramUpdate } from '../domain/types.js';
+import type { GreenApiCredentials, GreenApiInstance, SendTextMessageCommand, TelegramGateway, TelegramMessage, TelegramUpdate } from '../domain/types.js';
 
-type TelegramApiResponse<T> = {
-  ok: boolean;
-  result?: T;
+const GREEN_API_URL = 'https://api.green-api.com';
+
+type GreenApiError = {
+  message?: string;
   description?: string;
+};
+
+type GreenApiSettings = {
+  wid?: string;
+  typeInstance?: string;
+};
+
+type GreenApiState = {
+  stateInstance?: string;
+};
+
+type GreenApiNotification = {
+  receiptId?: number | string;
+  body?: {
+    typeWebhook?: string;
+    timestamp?: number;
+    idMessage?: string;
+    senderData?: {
+      chatId?: string;
+      chatName?: string;
+      senderName?: string;
+      senderContactName?: string;
+    };
+    messageData?: {
+      typeMessage?: string;
+      textMessageData?: {
+        textMessage?: string;
+      };
+    };
+  };
+};
+
+type GreenApiSendResult = {
+  idMessage?: string;
 };
 
 type FetchClient = typeof fetch;
 
 export function createTelegramHttpGateway(fetchClient: FetchClient = fetch): TelegramGateway {
-  async function request<T>(token: TelegramToken, method: string, payload: Record<string, unknown>): Promise<T> {
+  async function request<T>(credentials: GreenApiCredentials, method: string, init: RequestInit = {}): Promise<T> {
     let response: Response;
     try {
-      response = await fetchClient(`https://api.telegram.org/bot${token}/${method}`, {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify(payload)
-      });
+      response = await fetchClient(createUrl(credentials, method), init);
     } catch {
-      throw new HttpError(502, 'Не удалось связаться с Telegram API.');
+      throw new HttpError(502, 'Не удалось связаться с GREEN-API.');
     }
 
-    const data = await response.json().catch(() => ({})) as TelegramApiResponse<T>;
-    if (!response.ok || !data.ok || data.result === undefined) {
-      throw new HttpError(response.status || 502, data.description || 'Telegram API вернул ошибку.');
+    const data = await response.json().catch(() => ({})) as T & GreenApiError;
+    if (!response.ok) {
+      const message = data.message || data.description || 'GREEN-API вернул ошибку.';
+      throw new HttpError(response.status >= 400 && response.status < 500 ? 400 : 502, message);
     }
-    return data.result;
+    return data;
+  }
+
+  async function receiveNotification(credentials: GreenApiCredentials): Promise<GreenApiNotification | null> {
+    let response: Response;
+    try {
+      response = await fetchClient(`${createUrl(credentials, 'receiveNotification')}?receiveTimeout=5`);
+    } catch {
+      throw new HttpError(502, 'Не удалось получить уведомления GREEN-API.');
+    }
+    if (response.status === 204) return null;
+
+    const data = await response.json().catch(() => ({})) as GreenApiNotification & GreenApiError;
+    if (!response.ok) {
+      throw new HttpError(response.status >= 400 && response.status < 500 ? 400 : 502, data.message || data.description || 'GREEN-API вернул ошибку.');
+    }
+    return data.receiptId === undefined ? null : data;
+  }
+
+  async function deleteNotification(credentials: GreenApiCredentials, receiptId: number | string): Promise<void> {
+    await request(credentials, `deleteNotification/${encodeURIComponent(String(receiptId))}`, { method: 'DELETE' });
   }
 
   return {
-    getProfile: (token) => request<TelegramBot>(token, 'getMe', {}),
-    getUpdates: (token, offset) => request<TelegramUpdate[]>(token, 'getUpdates', {
-      offset,
-      // The browser owns the short polling cadence, so a manual refresh returns immediately.
-      timeout: 0,
-      allowed_updates: ['message']
-    }),
-    sendTextMessage: (token, command: SendTextMessageCommand) => request<TelegramMessage>(token, 'sendMessage', {
-      chat_id: command.chatId,
-      text: command.text
-    })
+    async getProfile(credentials) {
+      const [state, settings] = await Promise.all([
+        request<GreenApiState>(credentials, 'getStateInstance'),
+        request<GreenApiSettings>(credentials, 'getSettings')
+      ]);
+      return {
+        idInstance: credentials.idInstance,
+        stateInstance: state.stateInstance || 'unknown',
+        wid: settings.wid,
+        typeInstance: settings.typeInstance
+      } satisfies GreenApiInstance;
+    },
+    async getUpdates(credentials) {
+      const notification = await receiveNotification(credentials);
+      if (!notification || notification.receiptId === undefined) return [];
+
+      try {
+        const body = notification.body;
+        const text = body?.messageData?.textMessageData?.textMessage;
+        const chatId = body?.senderData?.chatId;
+        if (body?.typeWebhook !== 'incomingMessageReceived' || body.messageData?.typeMessage !== 'textMessage' || !text || !chatId) {
+          return [];
+        }
+
+        const message: TelegramMessage = {
+          message_id: body.idMessage || String(notification.receiptId),
+          date: body.timestamp || Math.floor(Date.now() / 1000),
+          chat: {
+            id: chatId,
+            title: body.senderData?.senderContactName || body.senderData?.senderName || body.senderData?.chatName
+          },
+          text
+        };
+        return [{ update_id: String(notification.receiptId), message }] satisfies TelegramUpdate[];
+      } finally {
+        await deleteNotification(credentials, notification.receiptId);
+      }
+    },
+    async sendTextMessage(credentials, command: SendTextMessageCommand) {
+      const result = await request<GreenApiSendResult>(credentials, 'sendMessage', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ chatId: command.chatId, message: command.text })
+      });
+      return {
+        message_id: result.idMessage || `local-${Date.now()}`,
+        date: Math.floor(Date.now() / 1000),
+        chat: { id: command.chatId },
+        text: command.text
+      };
+    }
   };
+}
+
+function createUrl(credentials: GreenApiCredentials, method: string): string {
+  return `${GREEN_API_URL}/waInstance${encodeURIComponent(credentials.idInstance)}/${method}/${encodeURIComponent(credentials.apiTokenInstance)}`;
 }

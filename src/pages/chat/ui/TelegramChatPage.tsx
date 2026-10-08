@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { ApiError, telegramApi } from '../../../shared/api/telegram';
+import { ApiError, greenApi } from '../../../shared/api/greenApi';
 import { chatSession } from '../../../shared/lib/chatSession';
 import { telegramQueryKeys, useTelegramSession, useTelegramUpdates } from '../../../entities/telegram/api/telegramQueries';
 import type { ChatId, ChatSummary, MessagesByChat, TelegramMessage } from '../../../entities/telegram/model/types';
@@ -22,7 +22,6 @@ export function TelegramChatPage() {
   const [chats, setChats] = useState<ChatSummary[]>(initialChatSession.chats);
   const [messages, setMessages] = useState<MessagesByChat>(initialChatSession.messages);
   const [selectedChatId, setSelectedChatId] = useState<ChatId | null>(initialChatSession.selectedChatId);
-  const [offset, setOffset] = useState<number | null>(initialChatSession.offset);
   const [messageDraft, setMessageDraft] = useState('');
   const [showSettings, setShowSettings] = useState(false);
   const [showNewChat, setShowNewChat] = useState(false);
@@ -32,7 +31,7 @@ export function TelegramChatPage() {
   const queryClient = useQueryClient();
   const sessionQuery = useTelegramSession(isSessionAvailable);
   const profile = isSessionAvailable ? sessionQuery.data ?? null : null;
-  const updatesQuery = useTelegramUpdates(offset, Boolean(profile));
+  const updatesQuery = useTelegramUpdates(Boolean(profile));
 
   const selectedChat = chats.find((chat) => String(chat.id) === String(selectedChatId)) || null;
   const activeMessages = useMemo(() => messages[String(selectedChatId)] || [], [messages, selectedChatId]);
@@ -49,26 +48,25 @@ export function TelegramChatPage() {
   }, [queryClient]);
 
   const connectMutation = useMutation({
-    mutationFn: telegramApi.connect,
-    onSuccess: (bot) => {
-      queryClient.setQueryData(telegramQueryKeys.session, bot);
+    mutationFn: ({ idInstance, apiTokenInstance }: { idInstance: string; apiTokenInstance: string }) => greenApi.connect(idInstance, apiTokenInstance),
+    onSuccess: (instance) => {
+      queryClient.setQueryData(telegramQueryKeys.session, instance);
       queryClient.removeQueries({ queryKey: telegramQueryKeys.updates });
       chatSession.clear();
       setIsSessionAvailable(true);
       setChats([]);
       setMessages({});
       setSelectedChatId(null);
-      setOffset(null);
       setError('');
       setShowSettings(false);
     },
     onError: (requestError) => {
-      setError(requestError instanceof Error ? requestError.message : 'Не удалось подключить бота.');
+      setError(requestError instanceof Error ? requestError.message : 'Не удалось подключить инстанс GREEN-API.');
     }
   });
 
   const sendMutation = useMutation({
-    mutationFn: ({ chatId, text }: { chatId: ChatId; text: string }) => telegramApi.sendMessage(chatId, text),
+    mutationFn: ({ chatId, text }: { chatId: ChatId; text: string }) => greenApi.sendMessage(chatId, text),
     onSuccess: (message) => {
       mergeMessage(message, 'outgoing');
       setMessageDraft('');
@@ -83,11 +81,11 @@ export function TelegramChatPage() {
     }
   });
 
-  const disconnectMutation = useMutation({ mutationFn: telegramApi.disconnect });
+  const disconnectMutation = useMutation({ mutationFn: greenApi.disconnect });
 
   useEffect(() => {
-    chatSession.set({ chats, messages, selectedChatId, offset });
-  }, [chats, messages, offset, selectedChatId]);
+    chatSession.set({ chats, messages, selectedChatId });
+  }, [chats, messages, selectedChatId]);
 
   useEffect(() => {
     if (!sessionQuery.error) return;
@@ -100,14 +98,11 @@ export function TelegramChatPage() {
 
   useEffect(() => {
     if (!updatesQuery.data?.length) return;
-    let nextOffset = offset;
     updatesQuery.data.forEach((update) => {
-      nextOffset = Math.max(nextOffset || 0, update.update_id + 1);
       if (update.message?.text) mergeMessage(update.message, 'incoming');
     });
-    if (nextOffset !== offset) setOffset(nextOffset);
     setError('');
-  }, [mergeMessage, offset, updatesQuery.data]);
+  }, [mergeMessage, updatesQuery.data]);
 
   useEffect(() => {
     if (!updatesQuery.error) return;
@@ -138,11 +133,12 @@ export function TelegramChatPage() {
 
   function connect(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const tokenValue = new FormData(event.currentTarget).get('token');
-    const token = typeof tokenValue === 'string' ? tokenValue.trim() : '';
-    if (!token) return;
+    const formData = new FormData(event.currentTarget);
+    const idInstance = formData.get('idInstance');
+    const apiTokenInstance = formData.get('apiTokenInstance');
+    if (typeof idInstance !== 'string' || typeof apiTokenInstance !== 'string' || !idInstance.trim() || !apiTokenInstance.trim()) return;
     setError('');
-    connectMutation.mutate(token);
+    connectMutation.mutate({ idInstance: idInstance.trim(), apiTokenInstance: apiTokenInstance.trim() });
   }
 
   function addChat(event: FormEvent<HTMLFormElement>) {
@@ -171,7 +167,6 @@ export function TelegramChatPage() {
     setChats([]);
     setMessages({});
     setSelectedChatId(null);
-    setOffset(null);
     setShowSettings(false);
     setError('');
   }

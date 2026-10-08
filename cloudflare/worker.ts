@@ -3,12 +3,12 @@ import { createTelegramHttpGateway } from '../server/modules/telegram/infrastruc
 import { HttpError } from '../server/shared/errors/HttpError.js';
 import { createCloudflareTelegramSessionStore, type Env } from './telegramSessionStore.js';
 
-const SESSION_COOKIE = 'telegram_session';
+const SESSION_COOKIE = 'green_api_session';
 const MAX_BODY_SIZE = 32 * 1024;
 
 type RequestBody = {
-  token?: unknown;
-  offset?: unknown;
+  idInstance?: unknown;
+  apiTokenInstance?: unknown;
   chatId?: unknown;
   text?: unknown;
 };
@@ -26,27 +26,28 @@ export default {
     );
 
     try {
-      if (url.pathname === '/api/telegram/connect' && request.method === 'POST') {
-        const session = await service.connect((await readBody(request)).token);
+      if (url.pathname === '/api/green-api/connect' && request.method === 'POST') {
+        const body = await readBody(request);
+        const session = await service.connect(body.idInstance, body.apiTokenInstance);
         return json(session.profile, {
           headers: { 'set-cookie': createSessionCookie(session.id, session.expiresAt) }
         });
       }
 
-      if (url.pathname === '/api/telegram/session' && request.method === 'GET') {
+      if (url.pathname === '/api/green-api/session' && request.method === 'GET') {
         return json(await service.getProfile(getSessionId(request)));
       }
 
-      if (url.pathname === '/api/telegram/updates' && request.method === 'POST') {
-        return json(await service.getUpdates(getSessionId(request), (await readBody(request)).offset));
+      if (url.pathname === '/api/green-api/updates' && request.method === 'POST') {
+        return json(await service.getUpdates(getSessionId(request)));
       }
 
-      if (url.pathname === '/api/telegram/send' && request.method === 'POST') {
+      if (url.pathname === '/api/green-api/send' && request.method === 'POST') {
         const body = await readBody(request);
         return json(await service.sendTextMessage(getSessionId(request), body.chatId, body.text));
       }
 
-      if (url.pathname === '/api/telegram/disconnect' && request.method === 'POST') {
+      if (url.pathname === '/api/green-api/disconnect' && request.method === 'POST') {
         await service.disconnect(getSessionId(request));
         return new Response(null, {
           status: 204,
@@ -82,11 +83,11 @@ function getSessionId(request: Request): string | undefined {
 
 function createSessionCookie(sessionId: string, expiresAt: number): string {
   const maxAge = Math.max(0, Math.floor((expiresAt - Date.now()) / 1000));
-  return `${SESSION_COOKIE}=${sessionId}; Max-Age=${maxAge}; Path=/api/telegram; HttpOnly; Secure; SameSite=Lax`;
+  return `${SESSION_COOKIE}=${sessionId}; Max-Age=${maxAge}; Path=/api/green-api; HttpOnly; Secure; SameSite=Lax`;
 }
 
 function clearSessionCookie(): string {
-  return `${SESSION_COOKIE}=; Max-Age=0; Path=/api/telegram; HttpOnly; Secure; SameSite=Lax`;
+  return `${SESSION_COOKIE}=; Max-Age=0; Path=/api/green-api; HttpOnly; Secure; SameSite=Lax`;
 }
 
 function errorResponse(error: unknown): Response {

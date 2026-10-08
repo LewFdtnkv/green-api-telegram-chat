@@ -2,11 +2,11 @@ import { Router } from 'express';
 import { asyncHandler } from '../../../shared/http/asyncHandler.js';
 import type { TelegramService } from '../application/telegramService.js';
 
-const SESSION_COOKIE = 'telegram_session';
+const SESSION_COOKIE = 'green_api_session';
 
 type RequestBody = {
-  token?: unknown;
-  offset?: unknown;
+  idInstance?: unknown;
+  apiTokenInstance?: unknown;
   chatId?: unknown;
   text?: unknown;
 };
@@ -16,13 +16,13 @@ export function createTelegramRouter(service: TelegramService) {
 
   router.post('/connect', asyncHandler(async (request, response) => {
     const body = request.body as RequestBody;
-    const session = await service.connect(body.token);
+    const session = await service.connect(body.idInstance, body.apiTokenInstance);
     response.cookie(SESSION_COOKIE, session.id, {
       httpOnly: true,
       sameSite: 'lax',
       secure: request.protocol === 'https' || request.get('x-forwarded-proto') === 'https',
       maxAge: session.expiresAt - Date.now(),
-      path: '/api/telegram'
+      path: '/api/green-api'
     });
     response.json(session.profile);
   }));
@@ -33,7 +33,7 @@ export function createTelegramRouter(service: TelegramService) {
 
   router.post('/updates', asyncHandler(async (request, response) => {
     const body = request.body as RequestBody;
-    response.json(await service.getUpdates(getSessionId(request.headers.cookie), body.offset));
+    response.json(await service.getUpdates(getSessionId(request.headers.cookie)));
   }));
 
   router.post('/send', asyncHandler(async (request, response) => {
@@ -43,7 +43,7 @@ export function createTelegramRouter(service: TelegramService) {
 
   router.post('/disconnect', asyncHandler(async (request, response) => {
     await service.disconnect(getSessionId(request.headers.cookie));
-    response.clearCookie(SESSION_COOKIE, { path: '/api/telegram' });
+    response.clearCookie(SESSION_COOKIE, { path: '/api/green-api' });
     response.status(204).end();
   }));
 

@@ -1,27 +1,26 @@
 import { useQuery } from '@tanstack/react-query';
-import { telegramApi } from '../../../shared/api/telegram';
+import { greenApi } from '../../../shared/api/greenApi';
 
 export const telegramQueryKeys = {
   session: ['telegram', 'session'] as const,
-  updates: ['telegram', 'updates'] as const,
-  updatesByOffset: (offset: number | null) => [...telegramQueryKeys.updates, offset] as const
+  updates: ['telegram', 'updates'] as const
 };
 
 export function useTelegramSession(enabled: boolean) {
   return useQuery({
     queryKey: telegramQueryKeys.session,
-    queryFn: telegramApi.getSession,
+    queryFn: greenApi.getSession,
     enabled,
     staleTime: 5 * 60 * 1000
   });
 }
 
-export function useTelegramUpdates(offset: number | null, enabled: boolean) {
+export function useTelegramUpdates(enabled: boolean) {
   return useQuery({
-    queryKey: telegramQueryKeys.updatesByOffset(offset),
-    queryFn: () => telegramApi.getUpdates(offset),
+    queryKey: telegramQueryKeys.updates,
+    queryFn: greenApi.getUpdates,
     enabled,
-    refetchInterval: 3000,
+    refetchInterval: 6000,
     refetchIntervalInBackground: false
   });
 }

@@ -10,7 +10,7 @@ export interface TelegramChat {
 }
 
 export interface TelegramMessage {
-  message_id: number;
+  message_id: string;
   date: number;
   chat: TelegramChat;
   text?: string;
@@ -18,14 +18,15 @@ export interface TelegramMessage {
 }
 
 export interface TelegramUpdate {
-  update_id: number;
+  update_id: string;
   message?: TelegramMessage;
 }
 
-export interface TelegramBot {
-  id: number;
-  first_name: string;
-  username: string;
+export interface GreenApiInstance {
+  idInstance: string;
+  stateInstance: string;
+  wid?: string;
+  typeInstance?: string;
 }
 
 export type MessageDirection = 'incoming' | 'outgoing';

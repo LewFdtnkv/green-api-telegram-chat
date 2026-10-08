@@ -8,7 +8,7 @@
     "dev:client": "vite",
     "dev:server": "tsx watch server/index.ts",
     "typecheck": "tsc --noEmit && tsc -p tsconfig.cloudflare.json",
-    "test": "tsx --test server/modules/telegram/application/telegramService.test.ts",
+    "test": "tsx --test server/modules/telegram/application/telegramService.test.ts server/modules/telegram/infrastructure/telegramHttpGateway.test.ts",
     "build": "npm run build:client && npm run build:server",
     "build:client": "vite build",
     "build:server": "tsc -p tsconfig.server.json",

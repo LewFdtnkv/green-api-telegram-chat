@@ -1,10 +1,15 @@
-export type TelegramToken = string;
 export type TelegramChatId = string | number;
 
-export type TelegramBot = {
-  id: number;
-  first_name: string;
-  username: string;
+export type GreenApiCredentials = {
+  idInstance: string;
+  apiTokenInstance: string;
+};
+
+export type GreenApiInstance = {
+  idInstance: string;
+  stateInstance: string;
+  wid?: string;
+  typeInstance?: string;
 };
 
 export type TelegramChat = {
@@ -17,14 +22,14 @@ export type TelegramChat = {
 };
 
 export type TelegramMessage = {
-  message_id: number;
+  message_id: string;
   date: number;
   chat: TelegramChat;
   text?: string;
 };
 
 export type TelegramUpdate = {
-  update_id: number;
+  update_id: string;
   message?: TelegramMessage;
 };
 
@@ -34,20 +39,20 @@ export type SendTextMessageCommand = {
 };
 
 export interface TelegramGateway {
-  getProfile(token: TelegramToken): Promise<TelegramBot>;
-  getUpdates(token: TelegramToken, offset?: number): Promise<TelegramUpdate[]>;
-  sendTextMessage(token: TelegramToken, command: SendTextMessageCommand): Promise<TelegramMessage>;
+  getProfile(credentials: GreenApiCredentials): Promise<GreenApiInstance>;
+  getUpdates(credentials: GreenApiCredentials): Promise<TelegramUpdate[]>;
+  sendTextMessage(credentials: GreenApiCredentials, command: SendTextMessageCommand): Promise<TelegramMessage>;
 }
 
 export type TelegramSession = {
   id: string;
-  token: TelegramToken;
-  profile: TelegramBot;
+  credentials: GreenApiCredentials;
+  profile: GreenApiInstance;
   expiresAt: number;
 };
 
 export interface TelegramSessionStore {
-  create(token: TelegramToken, profile: TelegramBot): Promise<TelegramSession>;
+  create(credentials: GreenApiCredentials, profile: GreenApiInstance): Promise<TelegramSession>;
   find(sessionId: string): Promise<TelegramSession | null>;
   delete(sessionId: string): Promise<void>;
 }

@@ -45,5 +45,5 @@ export function ChatWindow({ chat, messages, draft, isSending, isConnected, conn
 type WelcomeProps = Pick<ChatWindowProps, 'isConnected' | 'onOpenNewChat' | 'onOpenSettings'>;
 
 function Welcome({ isConnected, onOpenNewChat, onOpenSettings }: WelcomeProps) {
-  return <div className="welcome-screen"><div className="welcome-icon"><Bot size={36} /></div><h1>{isConnected ? 'Выберите чат' : 'Подключите Telegram-бота'}</h1><p>{isConnected ? 'Выберите чат слева или добавьте его по Chat ID.' : 'Введите токен бота, чтобы отправлять и получать текстовые сообщения.'}</p><button className="primary-button" type="button" onClick={isConnected ? onOpenNewChat : onOpenSettings}>{isConnected ? <><Plus size={18} /> Добавить чат</> : <><MessageCircleMore size={18} /> Подключить бота</>}</button></div>;
+  return <div className="welcome-screen"><div className="welcome-icon"><Bot size={36} /></div><h1>{isConnected ? 'Выберите чат' : 'Подключите Telegram-инстанс'}</h1><p>{isConnected ? 'Выберите чат слева или добавьте его по Chat ID.' : 'Введите реквизиты GREEN-API, чтобы отправлять и получать текстовые сообщения.'}</p><button className="primary-button" type="button" onClick={isConnected ? onOpenNewChat : onOpenSettings}>{isConnected ? <><Plus size={18} /> Добавить чат</> : <><MessageCircleMore size={18} /> Подключить инстанс</>}</button></div>;
 }

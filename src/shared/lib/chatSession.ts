@@ -6,14 +6,12 @@ export type ChatSessionSnapshot = {
   chats: ChatSummary[];
   messages: MessagesByChat;
   selectedChatId: ChatId | null;
-  offset: number | null;
 };
 
 const emptySnapshot: ChatSessionSnapshot = {
   chats: [],
   messages: {},
-  selectedChatId: null,
-  offset: null
+  selectedChatId: null
 };
 
 export const chatSession = {
@@ -26,8 +24,7 @@ export const chatSession = {
       return {
         chats: value.chats,
         messages: value.messages,
-        selectedChatId: typeof value.selectedChatId === 'string' || typeof value.selectedChatId === 'number' ? value.selectedChatId : null,
-        offset: typeof value.offset === 'number' && Number.isInteger(value.offset) ? value.offset : null
+        selectedChatId: typeof value.selectedChatId === 'string' || typeof value.selectedChatId === 'number' ? value.selectedChatId : null
       };
     } catch {
       return emptySnapshot;
